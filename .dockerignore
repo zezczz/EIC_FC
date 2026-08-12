@@ -1,0 +1,20 @@
+# 构建上下文排除（Dockerfile 构建时使用）
+node_modules
+.next
+.git
+.gitignore
+.opencode-tmp
+.env
+.env.*
+!.env.example
+*.log
+test-results
+playwright-report
+coverage
+docs
+compose.*.yml
+Caddyfile
+tests
+*.md
+!ARCHITECTURE.md
+src/generated/prisma

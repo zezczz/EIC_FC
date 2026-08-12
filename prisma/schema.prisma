@@ -1,0 +1,274 @@
+// EIC FC 球队网站 - Prisma Schema
+// 主契约: ARCHITECTURE.md 第 7 章 数据模型
+// 所有主键 UUID，时间字段 timestamptz (Prisma DateTime 默认映射 timestamptz)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- 认证与用户 ----------
+
+model User {
+  id                 String       @id @default(uuid()) @db.Uuid
+  username           String       @unique @db.VarChar(32)
+  usernameNormalized String       @unique @db.VarChar(32)
+  email              String       @unique @db.VarChar(254)
+  emailNormalized    String       @unique @db.VarChar(254)
+  passwordHash       String
+  displayName        String       @db.VarChar(50)
+  avatarAssetId      String?      @unique @db.Uuid
+  avatarAsset        MediaAsset?  @relation("AvatarOf", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  role               Role         @default(MEMBER)
+  status             UserStatus   @default(PENDING)
+  applicationMessage String?      @db.VarChar(500)
+  reviewReason       String?      @db.VarChar(500)
+  reviewedById       String?      @db.Uuid
+  reviewedBy         User?        @relation("UserReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt         DateTime?    @db.Timestamptz
+  lastLoginAt        DateTime?    @db.Timestamptz
+  createdAt          DateTime     @default(now()) @db.Timestamptz
+  updatedAt          DateTime     @updatedAt @db.Timestamptz
+  deletedAt          DateTime?    @db.Timestamptz
+
+  reviewedUsers      User[]       @relation("UserReviewed")
+  sessions           Session[]
+  accounts           Account[]
+  articles           Article[]    @relation("ArticleAuthor")
+  publishedArticles  Article[]    @relation("ArticlePublisher")
+  deletedArticles    Article[]    @relation("ArticleDeleter")
+  createdRelays      Relay[]
+  relayEntries       RelayEntry[]
+  uploadedMedia      MediaAsset[] @relation("MediaUploader")
+  auditLogs          AuditLog[]
+
+  @@index([status])
+  @@index([emailNormalized])
+  @@index([usernameNormalized])
+}
+
+model Account {
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique @db.VarChar(255)
+  userId       String   @db.Uuid
+  expires      DateTime @db.Timestamptz
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expires])
+}
+
+model VerificationToken {
+  identifier String   @db.VarChar(255)
+  token      String   @db.VarChar(255)
+  expires    DateTime @db.Timestamptz
+
+  @@id([identifier, token])
+}
+
+// ---------- 球队动态 ----------
+
+model Article {
+  id            String     @id @default(uuid()) @db.Uuid
+  slug          String     @unique @db.VarChar(180)
+  title         String     @db.VarChar(120)
+  subtitle      String?    @db.VarChar(180)
+  summary       String     @db.VarChar(300)
+  contentJson   Json
+  plainText     String
+  coverAssetId  String?    @unique @db.Uuid
+  coverAsset    MediaAsset? @relation("ArticleCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+  status        ArticleStatus @default(DRAFT)
+  authorId      String     @db.Uuid
+  author        User       @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  publishedById String?    @db.Uuid
+  publishedBy   User?      @relation("ArticlePublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  publishedAt   DateTime?  @db.Timestamptz
+  pinnedAt      DateTime?  @db.Timestamptz
+  pinOrder      Int?
+  viewCount     BigInt     @default(0)
+  version       Int        @default(1)
+  createdAt     DateTime   @default(now()) @db.Timestamptz
+  updatedAt     DateTime   @updatedAt @db.Timestamptz
+  deletedAt     DateTime?  @db.Timestamptz
+  deletedById   String?    @db.Uuid
+  deletedBy     User?      @relation("ArticleDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  @@index([status, pinnedAt, pinOrder, publishedAt])
+  @@index([authorId])
+  @@index([deletedAt])
+}
+
+// ---------- 媒体 ----------
+
+model MediaAsset {
+  id           String          @id @default(uuid()) @db.Uuid
+  storageKey   String          @unique @db.VarChar(255)
+  originalName String          @db.VarChar(255)
+  mimeType     String          @db.VarChar(50)
+  sizeBytes    BigInt
+  width        Int?
+  height       Int?
+  sha256       String          @db.Char(64)
+  status       MediaStatus     @default(UPLOADING)
+  uploadedById String?         @db.Uuid
+  uploadedBy   User?           @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  purpose      MediaPurpose
+  createdAt    DateTime        @default(now()) @db.Timestamptz
+  deletedAt    DateTime?       @db.Timestamptz
+
+  avatarUser   User?           @relation("AvatarOf")
+  articleCovers Article[]      @relation("ArticleCover")
+
+  @@index([uploadedById])
+  @@index([status])
+}
+
+// ---------- 接龙 ----------
+
+model Relay {
+  id              String          @id @default(uuid()) @db.Uuid
+  title           String          @db.VarChar(120)
+  description     String          @db.VarChar(2000)
+  eventAt         DateTime        @db.Timestamptz
+  eventEndsAt     DateTime?       @db.Timestamptz
+  location        String          @db.VarChar(200)
+  signupDeadline  DateTime        @db.Timestamptz
+  capacity        Int?
+  waitlistEnabled Boolean         @default(true)
+  status          RelayStatus     @default(DRAFT)
+  createdById     String          @db.Uuid
+  createdBy       User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  version         Int             @default(1)
+  createdAt       DateTime        @default(now()) @db.Timestamptz
+  updatedAt       DateTime        @updatedAt @db.Timestamptz
+  deletedAt       DateTime?       @db.Timestamptz
+
+  entries         RelayEntry[]
+
+  @@index([status, eventAt])
+  @@index([createdById])
+}
+
+model RelayEntry {
+  id               String   @id @default(uuid()) @db.Uuid
+  relayId          String   @db.Uuid
+  relay            Relay    @relation(fields: [relayId], references: [id], onDelete: Cascade)
+  userId           String   @db.Uuid
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  response         RelayResponse @default(JOINED)
+  participantCount Int      @default(1)
+  note             String?  @db.VarChar(300)
+  createdAt        DateTime @default(now()) @db.Timestamptz
+  updatedAt        DateTime @updatedAt @db.Timestamptz
+
+  @@unique([relayId, userId])
+  @@index([relayId, response])
+}
+
+// ---------- 审计与安全 ----------
+
+model AuditLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  actorId      String?   @db.Uuid
+  actor        User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action       String    @db.VarChar(80)
+  resourceType String    @db.VarChar(50)
+  resourceId   String    @db.VarChar(100)
+  before       Json?
+  after        Json?
+  reason       String?   @db.VarChar(500)
+  requestId    String    @db.VarChar(64)
+  ipHash       String?   @db.Char(64)
+  userAgent    String?   @db.VarChar(300)
+  createdAt    DateTime  @default(now()) @db.Timestamptz
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+model LoginAttempt {
+  id           String            @id @default(uuid()) @db.Uuid
+  kind         AuthAttemptKind   @default(LOGIN)
+  identityHash String            @db.Char(64)
+  ipHash       String            @db.Char(64)
+  succeeded    Boolean           @default(false)
+  createdAt    DateTime          @default(now()) @db.Timestamptz
+
+  @@index([kind, identityHash, createdAt])
+  @@index([kind, ipHash, createdAt])
+}
+
+// ---------- 枚举 ----------
+
+enum Role {
+  MEMBER
+  CAPTAIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaStatus {
+  UPLOADING
+  READY
+  REJECTED
+  DELETED
+}
+
+enum MediaPurpose {
+  ARTICLE_COVER
+  ARTICLE_CONTENT
+  AVATAR
+}
+
+enum RelayStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+  FINISHED
+}
+
+enum RelayResponse {
+  JOINED
+  WAITLISTED
+  DECLINED
+}
+
+enum AuthAttemptKind {
+  LOGIN
+  REGISTER
+}
+

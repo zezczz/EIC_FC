@@ -1,0 +1,39 @@
+# EIC FC Caddy 配置（ARCHITECTURE.md §20）
+# 主域名 HTTPS；www 301 跳转；安全响应头；反代 app:3000
+
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+www.czzczzzez.cloud {
+	redir https://czzczzzez.cloud{uri} permanent
+}
+
+czzczzzez.cloud {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# 上传体限制（与 MAX_IMAGE_BYTES 对齐，留余量）
+	request_body {
+		max_size 12MB
+	}
+
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

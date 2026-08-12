@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: eicfc
+          POSTGRES_PASSWORD: eicfc_test_password
+          POSTGRES_DB: eicfc_test
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U eicfc -d eicfc_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - "9000:9000"
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        volumes: []
+
+    env:
+      NODE_ENV: test
+      APP_URL: http://localhost:3000
+      AUTH_SECRET: ci-auth-secret-32chars-minimum!!!!
+      TRUSTED_ORIGINS: http://localhost:3000
+      TZ: Asia/Shanghai
+      DATABASE_URL: postgresql://eicfc:eicfc_test_password@localhost:5432/eicfc_test
+      DIRECT_URL: postgresql://eicfc:eicfc_test_password@localhost:5432/eicfc_test
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: eicfc
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+      S3_PUBLIC_BASE_URL: http://localhost:9000/eicfc
+      S3_FORCE_PATH_STYLE: "true"
+      MAX_IMAGE_BYTES: "8388608"
+      MAX_IMAGE_PIXELS: "40000000"
+      LOG_LEVEL: info
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm db:generate
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Prisma migrate (integration)
+        run: pnpm db:deploy
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Production build
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Playwright (key flows)
+        run: pnpm test:e2e
+        env:
+          CI: "1"
+          NODE_ENV: development
