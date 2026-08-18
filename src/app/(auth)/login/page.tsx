@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SiteHeader } from "@/components/site-header";
 
 type ApiError = { code: string; message: string; fieldErrors?: Record<string, string[]> };
 
@@ -53,9 +52,7 @@ export default function LoginPage() {
   }
 
   return (
-    <>
-      <SiteHeader />
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
+    <main className="flex flex-1 items-center justify-center px-4 py-12">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>登录</CardTitle>
@@ -97,6 +94,5 @@ export default function LoginPage() {
           </CardContent>
         </Card>
       </main>
-    </>
   );
 }

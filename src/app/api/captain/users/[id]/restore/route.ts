@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handle, requireSameOrigin, getClientIp } from "@/server/http";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import { uuidParamSchema } from "@/schemas/users";
 import { restoreUser, type ReviewContext } from "@/server/users/service";
 
@@ -9,7 +10,7 @@ import { restoreUser, type ReviewContext } from "@/server/users/service";
  */
 export const POST = handle(async (request: NextRequest, { requestId, params }) => {
   requireSameOrigin(request);
-  const captain = await requireCaptain();
+  const captain = await requirePermission(PERMISSIONS.USERS_REVIEW);
   const id = uuidParamSchema.parse(params.id);
   const ctx: ReviewContext = {
     actorId: captain.id,

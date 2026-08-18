@@ -1,5 +1,51 @@
 # 运行手册
 
+## 本地开发一键启动
+
+Windows 推荐使用项目根目录的 [start-dev.cmd](start-dev.cmd)（双击即可），或在仓库根目录执行：
+
+```powershell
+pnpm dev:local
+# 或
+.\scripts\start-dev.ps1
+```
+
+脚本会自动完成：
+
+1. 检查 Node 22+、pnpm、`.env.local`
+2. 若 `http://localhost:3000` 已是本项目健康服务，则直接打开浏览器，不重复启动 dev
+3. 若端口被其他程序占用，会提示 PID 并停止
+4. 启动 Docker Desktop（如未运行）并拉起 PostgreSQL + MinIO
+5. 执行 `pnpm db:deploy`
+6. 启动 `pnpm dev`，就绪后自动打开浏览器
+
+可选参数：
+
+| 参数 | 说明 |
+|------|------|
+| `-SkipDocker` | 跳过 Docker 启动 |
+| `-SkipMigrate` | 跳过数据库迁移 |
+| `-SkipBrowser` | 不自动打开浏览器 |
+| `-Port 3001` | 使用其他端口 |
+
+示例：
+
+```powershell
+.\scripts\start-dev.ps1 -SkipDocker
+.\scripts\start-dev.ps1 -Port 3001
+```
+
+### 本地启动常见故障
+
+| 现象 | 排查 |
+|------|------|
+| 端口 3000 被占用 | 脚本会显示 PID；执行 `taskkill /PID <pid> /F` 或关闭旧终端 |
+| Docker 未就绪 | 手动打开 Docker Desktop，再重试 `start-dev.cmd` |
+| 页面报 Prisma 字段错误 | 执行 `pnpm prisma generate` 后重启 dev |
+| 无队长账号 | 执行 `pnpm captain:bootstrap` |
+
+测试账号：`captain` / `TestCaptain123!`，`testmember01` / `TestMember123!`
+
 ## 常见故障
 
 | 现象 | 排查 |

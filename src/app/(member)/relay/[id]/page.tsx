@@ -61,9 +61,16 @@ export default async function RelayDetailPage({ params }: PageProps<"/relay/[id]
                   key={entry.id}
                   className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm"
                 >
-                  <span>
-                    {entry.user.displayName} · {entry.participantCount} 人
-                  </span>
+                  <div>
+                    <span>
+                      {entry.user.displayName} · {entry.participantCount} 人
+                    </span>
+                    {entry.companionNames.length > 0 && (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        同行：{entry.companionNames.join("、")}
+                      </p>
+                    )}
+                  </div>
                   <Badge variant="outline">{entry.response}</Badge>
                 </div>
               ))

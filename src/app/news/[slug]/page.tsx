@@ -11,12 +11,14 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
   const { slug } = await params;
   const article = await db.article.findFirst({
     where: { slug, status: "PUBLISHED", deletedAt: null },
-    select: { title: true, summary: true, coverAsset: { select: { storageKey: true } } },
+    select: { title: true, summary: true, coverUrl: true, coverAsset: { select: { storageKey: true } } },
   });
   if (!article) return { title: "动态未找到", robots: { index: false } };
-  const image = article.coverAsset
-    ? `${env.APP_URL}/api/media/${article.coverAsset.storageKey}`
-    : undefined;
+  const image = article.coverUrl
+    ? article.coverUrl
+    : article.coverAsset
+      ? `${env.APP_URL}/api/media/${article.coverAsset.storageKey}`
+      : undefined;
   return {
     title: article.title,
     description: article.summary,

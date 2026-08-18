@@ -19,6 +19,28 @@ describe("tiptap renderer", () => {
     expect(html).toContain("<strong>EIC</strong>");
   });
 
+  it("渲染外部 https 图片", () => {
+    const html = renderArticleContent({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "image",
+              attrs: {
+                src: "https://cdn.example.com/cover.jpg",
+                alt: "封面",
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(html).toContain('src="https://cdn.example.com/cover.jpg"');
+    expect(html).toContain('referrerpolicy="no-referrer"');
+  });
+
   it("忽略 javascript: 链接而不输出 a 标签", () => {
     const html = renderArticleContent({
       type: "doc",
@@ -51,5 +73,24 @@ describe("tiptap renderer", () => {
     });
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+  });
+
+  it("拒绝缺少 alt 的外部图片", () => {
+    expect(() =>
+      renderArticleContent({
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "image",
+                attrs: { src: "https://cdn.example.com/a.jpg", alt: "" },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
   });
 });

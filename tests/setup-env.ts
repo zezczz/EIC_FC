@@ -9,7 +9,14 @@ if (existsSync(".env.test")) {
   loadDotenv({ path: ".env.example", override: true });
 }
 
-process.env.NODE_ENV ||= "test";
+if (!process.env.NODE_ENV) {
+  Object.defineProperty(process.env, "NODE_ENV", {
+    value: "test",
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
+}
 process.env.APP_URL ||= "http://localhost:3000";
 process.env.AUTH_SECRET ||= "test-auth-secret-32chars-minimum!!";
 process.env.TRUSTED_ORIGINS ||= "http://localhost:3000";

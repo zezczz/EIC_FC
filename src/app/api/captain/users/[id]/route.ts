@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handle } from "@/server/http";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import { db } from "@/server/db";
 import { uuidParamSchema } from "@/schemas/users";
 import { errNotFound } from "@/server/errors";
@@ -9,7 +10,7 @@ import { errNotFound } from "@/server/errors";
  * GET /api/captain/users/:id - 用户详情
  */
 export const GET = handle(async (_request: NextRequest, { requestId, params }) => {
-  await requireCaptain();
+  await requirePermission(PERMISSIONS.USERS_REVIEW);
   const id = uuidParamSchema.parse(params.id);
   const user = await db.user.findFirst({
     where: { id, deletedAt: null },

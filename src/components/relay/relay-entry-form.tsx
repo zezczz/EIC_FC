@@ -15,20 +15,44 @@ export function RelayEntryForm({
 }: {
   relayId: string;
   disabled: boolean;
-  initial?: { participantCount: number; note: string | null; response: string } | null;
+  initial?: {
+    participantCount: number;
+    companionNames: string[];
+    note: string | null;
+    response: string;
+  } | null;
 }) {
   const router = useRouter();
   const [participantCount, setParticipantCount] = useState(initial?.participantCount ?? 1);
+  const [companionNames, setCompanionNames] = useState<string[]>(
+    initial?.companionNames ?? [],
+  );
   const [note, setNote] = useState(initial?.note ?? "");
   const [busy, setBusy] = useState(false);
+
+  function updateParticipantCount(next: number) {
+    setParticipantCount(next);
+    const expected = Math.max(0, next - 1);
+    setCompanionNames((current) => {
+      if (current.length === expected) return current;
+      if (current.length > expected) return current.slice(0, expected);
+      return [...current, ...Array.from({ length: expected - current.length }, () => "")];
+    });
+  }
 
   async function submit(response: "JOINED" | "DECLINED") {
     setBusy(true);
     try {
+      const payload = {
+        response,
+        participantCount,
+        companionNames: response === "JOINED" ? companionNames.map((name) => name.trim()) : [],
+        note: note || null,
+      };
       const res = await fetch(`/api/relays/${relayId}/entry`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ response, participantCount, note: note || null }),
+        body: JSON.stringify(payload),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message || "提交失败");
@@ -58,16 +82,41 @@ export function RelayEntryForm({
       <h2 className="font-bold">我的接龙</h2>
       {initial && <p className="text-muted-foreground text-sm">当前状态：{initial.response}</p>}
       <div className="space-y-2">
-        <Label htmlFor="participantCount">参加人数</Label>
+        <Label htmlFor="participantCount">参加人数（含本人）</Label>
         <Input
           id="participantCount"
           type="number"
           min={1}
           max={20}
           value={participantCount}
-          onChange={(e) => setParticipantCount(Number(e.target.value))}
+          onChange={(e) => updateParticipantCount(Number(e.target.value))}
         />
       </div>
+      {participantCount > 1 && (
+        <div className="space-y-3">
+          <Label>同行人员姓名</Label>
+          {companionNames.map((name, index) => (
+            <div key={index} className="space-y-1">
+              <Label htmlFor={`companion-${index}`} className="text-muted-foreground text-xs">
+                同行 {index + 1}
+              </Label>
+              <Input
+                id={`companion-${index}`}
+                value={name}
+                onChange={(e) =>
+                  setCompanionNames((current) =>
+                    current.map((item, itemIndex) =>
+                      itemIndex === index ? e.target.value : item,
+                    ),
+                  )
+                }
+                maxLength={50}
+                required
+              />
+            </div>
+          ))}
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="note">备注</Label>
         <Textarea

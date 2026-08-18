@@ -7,6 +7,7 @@ import { errConflict, errNotFound, errVersionConflict, AppError } from "@/server
 import { writeAudit } from "@/server/audit";
 import { createUniqueSlug } from "@/server/articles/slug";
 import { extractPlainText } from "@/server/articles/renderer";
+import { isExternalHttpsUrl } from "@/lib/external-image";
 
 export type ArticleContext = {
   actorId: string;
@@ -40,6 +41,22 @@ async function assertReadyCover(assetId: string | null | undefined) {
     select: { id: true },
   });
   if (!asset) throw new AppError("VALIDATION_ERROR", "封面图片不可用");
+}
+
+function normalizeCoverInput(input: { coverUrl?: string | null; coverAssetId?: string | null }) {
+  if (input.coverUrl) {
+    if (!isExternalHttpsUrl(input.coverUrl)) {
+      throw new AppError("VALIDATION_ERROR", "封面必须使用 https:// 图床链接");
+    }
+    return { coverUrl: input.coverUrl.trim(), coverAssetId: null as string | null };
+  }
+  if (input.coverAssetId) {
+    return { coverUrl: null as string | null, coverAssetId: input.coverAssetId };
+  }
+  if (input.coverUrl === null || input.coverAssetId === null) {
+    return { coverUrl: null as string | null, coverAssetId: null as string | null };
+  }
+  return null;
 }
 
 async function getManagedArticle(id: string) {
@@ -77,6 +94,10 @@ function invalidate(slug?: string) {
 
 export async function createArticle(input: ArticleCreateInput, ctx: ArticleContext) {
   await assertReadyCover(input.coverAssetId);
+  const cover = normalizeCoverInput(input) ?? {
+    coverUrl: input.coverUrl ?? null,
+    coverAssetId: input.coverAssetId ?? null,
+  };
   const slug = await createUniqueSlug(input.title, async (candidate) => {
     return (await db.article.count({ where: { slug: candidate } })) > 0;
   });
@@ -88,7 +109,8 @@ export async function createArticle(input: ArticleCreateInput, ctx: ArticleConte
       summary: input.summary,
       contentJson: json(input.contentJson),
       plainText: extractPlainText(input.contentJson),
-      coverAssetId: input.coverAssetId ?? null,
+      coverUrl: cover.coverUrl,
+      coverAssetId: cover.coverAssetId,
       authorId: ctx.actorId,
     },
     include: articleInclude,
@@ -105,6 +127,7 @@ export async function updateArticle(id: string, input: ArticleUpdateInput, ctx: 
   const before = await getManagedArticle(id);
   if (before.deletedAt) throw errConflict("已删除文章不可编辑，请先恢复");
   await assertReadyCover(input.coverAssetId);
+  const cover = normalizeCoverInput(input);
 
   const result = await db.article.updateMany({
     where: { id, version: input.version, deletedAt: null },
@@ -118,7 +141,14 @@ export async function updateArticle(id: string, input: ArticleUpdateInput, ctx: 
             plainText: extractPlainText(input.contentJson),
           }
         : {}),
-      ...(input.coverAssetId !== undefined ? { coverAssetId: input.coverAssetId } : {}),
+      ...(cover
+        ? { coverUrl: cover.coverUrl, coverAssetId: cover.coverAssetId }
+        : input.coverUrl !== undefined || input.coverAssetId !== undefined
+          ? {
+              coverUrl: input.coverUrl ?? null,
+              coverAssetId: input.coverAssetId ?? null,
+            }
+          : {}),
       version: { increment: 1 },
     },
   });
@@ -244,6 +274,7 @@ export async function listPublicArticles(input: { cursor?: string; limit: number
       summary: true,
       publishedAt: true,
       pinnedAt: true,
+      coverUrl: true,
       coverAsset: { select: { storageKey: true, mimeType: true } },
       author: { select: { displayName: true } },
     },
@@ -267,6 +298,7 @@ export async function getPublicArticle(slug: string) {
       updatedAt: true,
       pinnedAt: true,
       viewCount: true,
+      coverUrl: true,
       author: { select: { displayName: true } },
       coverAsset: {
         select: { id: true, storageKey: true, mimeType: true, width: true, height: true },

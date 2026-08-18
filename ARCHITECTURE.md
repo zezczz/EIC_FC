@@ -268,6 +268,7 @@ summary        varchar(300)
 contentJson    jsonb
 plainText      text
 coverAssetId   UUID nullable FK MediaAsset
+coverUrl       varchar(2048) nullable   # 外部 https 图床封面（新建推荐）
 status         DRAFT | PUBLISHED | ARCHIVED
 authorId       UUID FK User
 publishedById  UUID nullable FK User
@@ -289,7 +290,9 @@ deletedById    UUID nullable FK User
 - 未发布文章不得设置 `pinnedAt`；
 - `version` 用于乐观锁；
 - 列表索引为 `(status, pinnedAt, pinOrder, publishedAt)`；
-- 浏览量更新不能阻塞文章读取。
+- 浏览量更新不能阻塞文章读取；
+- 新建文章封面与正文图片使用外部 `https://` 图床 URL，不在本站存储文章图片；
+- 旧版 `coverAssetId` 与 `/api/media/...` 正文图片保留兼容渲染。
 
 ### 7.4 MediaAsset
 
@@ -347,6 +350,7 @@ relayId           UUID FK Relay
 userId            UUID FK User
 response          JOINED | WAITLISTED | DECLINED
 participantCount  integer default 1
+companionNames    text[] default '{}'   # 同行人员姓名，数量 = participantCount - 1
 note              varchar(300) nullable
 createdAt         timestamptz
 updatedAt         timestamptz
@@ -356,6 +360,7 @@ updatedAt         timestamptz
 
 - `(relayId, userId)` 唯一；
 - `participantCount >= 1`；
+- `companionNames.length` 必须等于 `participantCount - 1`（仅 JOINED/WAITLISTED 报名时校验）；
 - 只有 JOINED 计入正式容量；
 - 重复提交使用 upsert；
 - 报名、容量校验和候补递补必须处于同一数据库事务。

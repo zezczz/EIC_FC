@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
+import { resolveArticleCoverUrl } from "@/lib/external-image";
 
 export type ArticleCardData = {
   id: string;
@@ -10,6 +11,7 @@ export type ArticleCardData = {
   summary: string;
   publishedAt: Date | null;
   pinnedAt: Date | null;
+  coverUrl?: string | null;
   coverAsset: { storageKey: string; mimeType: string } | null;
 };
 
@@ -17,16 +19,20 @@ export type ArticleCardData = {
  * 文章卡片（ARCHITECTURE.md §13：统一封面比例）。
  */
 export function ArticleCard({ article, rank }: { article: ArticleCardData; rank?: number }) {
+  const coverSrc = resolveArticleCoverUrl(article);
+
   return (
     <Link href={`/news/${article.slug}`} className="group block h-full">
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
         <div className="bg-muted aspect-[16/10] w-full overflow-hidden">
-          {article.coverAsset ? (
+          {coverSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`/api/media/${article.coverAsset.storageKey}`}
+              src={coverSrc}
               alt={article.title}
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              loading="lazy"
+              referrerPolicy="no-referrer"
             />
           ) : (
             <div className="text-muted-foreground/30 flex h-full items-center justify-center text-3xl font-black">

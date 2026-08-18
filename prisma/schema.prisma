@@ -24,6 +24,8 @@ model User {
   avatarAssetId      String?      @unique @db.Uuid
   avatarAsset        MediaAsset?  @relation("AvatarOf", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   role               Role         @default(MEMBER)
+  staffTitle         StaffTitle?
+  permissions        String[]     @default([])
   status             UserStatus   @default(PENDING)
   applicationMessage String?      @db.VarChar(500)
   reviewReason       String?      @db.VarChar(500)
@@ -41,7 +43,8 @@ model User {
   articles           Article[]    @relation("ArticleAuthor")
   publishedArticles  Article[]    @relation("ArticlePublisher")
   deletedArticles    Article[]    @relation("ArticleDeleter")
-  createdRelays      Relay[]
+  createdRelays      Relay[]      @relation("RelayCreator")
+  deletedRelays      Relay[]      @relation("RelayDeleter")
   relayEntries       RelayEntry[]
   uploadedMedia      MediaAsset[] @relation("MediaUploader")
   auditLogs          AuditLog[]
@@ -98,6 +101,7 @@ model Article {
   plainText     String
   coverAssetId  String?    @unique @db.Uuid
   coverAsset    MediaAsset? @relation("ArticleCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+  coverUrl      String?    @db.VarChar(2048)
   status        ArticleStatus @default(DRAFT)
   authorId      String     @db.Uuid
   author        User       @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -158,16 +162,19 @@ model Relay {
   waitlistEnabled Boolean         @default(true)
   status          RelayStatus     @default(DRAFT)
   createdById     String          @db.Uuid
-  createdBy       User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy       User            @relation("RelayCreator", fields: [createdById], references: [id], onDelete: Restrict)
   version         Int             @default(1)
   createdAt       DateTime        @default(now()) @db.Timestamptz
   updatedAt       DateTime        @updatedAt @db.Timestamptz
   deletedAt       DateTime?       @db.Timestamptz
+  deletedById     String?         @db.Uuid
+  deletedBy       User?           @relation("RelayDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
 
   entries         RelayEntry[]
 
   @@index([status, eventAt])
   @@index([createdById])
+  @@index([deletedAt])
 }
 
 model RelayEntry {
@@ -178,6 +185,7 @@ model RelayEntry {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   response         RelayResponse @default(JOINED)
   participantCount Int      @default(1)
+  companionNames   String[] @default([])
   note             String?  @db.VarChar(300)
   createdAt        DateTime @default(now()) @db.Timestamptz
   updatedAt        DateTime @updatedAt @db.Timestamptz
@@ -224,7 +232,14 @@ model LoginAttempt {
 
 enum Role {
   MEMBER
+  STAFF
   CAPTAIN
+}
+
+enum StaffTitle {
+  COACH
+  VICE_CAPTAIN
+  MANAGER
 }
 
 enum UserStatus {

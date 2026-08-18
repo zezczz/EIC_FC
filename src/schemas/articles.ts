@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { routeParamString, routeUuidParam } from "@/schemas/common";
+import { routeUuidParam } from "@/schemas/common";
+import { isAllowedArticleImageSrc, isExternalHttpsUrl } from "@/lib/external-image";
 
 const tiptapMarkSchema = z
   .object({
@@ -42,10 +43,36 @@ const tiptapNodeSchema: z.ZodType<TiptapNode> = z.lazy(() =>
     .strict(),
 );
 
+function validateImageNodes(node: TiptapNode, ctx: z.RefinementCtx, path: string) {
+  if (node.type === "image") {
+    const src = typeof node.attrs?.src === "string" ? node.attrs.src.trim() : "";
+    const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
+    if (!isAllowedArticleImageSrc(src) || !alt) {
+      ctx.addIssue({
+        code: "custom",
+        message: `${path}图片必须使用 https:// 图床链接并填写替代文本`,
+      });
+    }
+  }
+  for (const [index, child] of (node.content ?? []).entries()) {
+    validateImageNodes(child, ctx, `${path}.${index}`);
+  }
+}
+
+export const coverUrlSchema = z
+  .string()
+  .trim()
+  .url("封面链接格式无效")
+  .max(2048)
+  .refine((value) => isExternalHttpsUrl(value), {
+    message: "封面必须使用 https:// 图床链接",
+  });
+
 export const articleContentSchema = tiptapNodeSchema.superRefine((node, ctx) => {
   if (node.type !== "doc") {
     ctx.addIssue({ code: "custom", message: "正文根节点必须为 doc" });
   }
+  validateImageNodes(node, ctx, "正文");
 });
 
 export const articleIdSchema = routeUuidParam;
@@ -58,6 +85,7 @@ export const articleCreateSchema = z.object({
   subtitle: z.string().trim().max(180).nullable().optional(),
   summary: z.string().trim().min(1, "摘要不能为空").max(300),
   contentJson: articleContentSchema,
+  coverUrl: coverUrlSchema.nullable().optional(),
   coverAssetId: z.string().uuid().nullable().optional(),
 });
 

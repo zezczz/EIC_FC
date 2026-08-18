@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { articleIdSchema, articleUpdateSchema } from "@/schemas/articles";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import {
   deleteArticle,
   getCaptainArticle,
@@ -19,14 +20,14 @@ function context(request: NextRequest, requestId: string, actorId: string): Arti
 }
 
 export const GET = handle(async (_request: NextRequest, { requestId, params }) => {
-  await requireCaptain();
+  await requirePermission(PERMISSIONS.ARTICLES_WRITE);
   const data = await getCaptainArticle(articleIdSchema.parse(params.id));
   return NextResponse.json({ data, requestId });
 });
 
 export const PATCH = handle(async (request: NextRequest, { requestId, params }) => {
   requireSameOrigin(request);
-  const captain = await requireCaptain();
+  const captain = await requirePermission(PERMISSIONS.ARTICLES_WRITE);
   const input = await parseJsonBody(request, articleUpdateSchema);
   const data = await updateArticle(
     articleIdSchema.parse(params.id),
@@ -38,7 +39,7 @@ export const PATCH = handle(async (request: NextRequest, { requestId, params }) 
 
 export const DELETE = handle(async (request: NextRequest, { requestId, params }) => {
   requireSameOrigin(request);
-  const captain = await requireCaptain();
+  const captain = await requirePermission(PERMISSIONS.ARTICLES_WRITE);
   const data = await deleteArticle(
     articleIdSchema.parse(params.id),
     context(request, requestId, captain.id),

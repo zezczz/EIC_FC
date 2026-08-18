@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import type { RelayStatus, RelayResponse } from "@/generated/prisma/enums";
 import type { RelayCreateInput, RelayEntryInput, RelayUpdateInput } from "@/schemas/relays";
 import { db } from "@/server/db";
@@ -38,6 +39,23 @@ async function getRelayOrThrow(id: string) {
   return relay;
 }
 
+async function getDeletedRelayOrThrow(id: string) {
+  const relay = await db.relay.findUnique({ where: { id } });
+  if (!relay) throw errNotFound("接龙不存在");
+  if (!relay.deletedAt) throw errConflict("接龙未被删除");
+  return relay;
+}
+
+function invalidateRelay(id?: string) {
+  try {
+    revalidatePath("/captain/relays");
+    revalidatePath("/relay");
+    if (id) revalidatePath(`/relay/${id}`);
+  } catch {
+    // 非 Next.js 请求上下文（测试/脚本）忽略缓存刷新
+  }
+}
+
 function assertDates(input: { eventAt: Date; eventEndsAt: Date | null; signupDeadline: Date }) {
   if (input.signupDeadline > input.eventAt) {
     throw new AppError("VALIDATION_ERROR", "报名截止时间不能晚于活动时间");
@@ -67,6 +85,7 @@ export async function createRelay(input: RelayCreateInput, ctx: RelayContext) {
     },
   });
   await audit(ctx, "RELAY_CREATE", relay.id, undefined, { title: relay.title });
+  invalidateRelay(relay.id);
   return relay;
 }
 
@@ -98,6 +117,7 @@ export async function updateRelay(id: string, input: RelayUpdateInput, ctx: Rela
   if (result.count === 0) throw errVersionConflict("接龙已被其他人修改，请刷新后重试");
   const relay = await getRelayOrThrow(id);
   await audit(ctx, "RELAY_UPDATE", id, { version: before.version }, { version: relay.version });
+  invalidateRelay(id);
   return relay;
 }
 
@@ -123,29 +143,55 @@ async function transitionRelay(
     data: { status: next, version: { increment: 1 } },
   });
   await audit(ctx, action, id, { status: before.status }, { status: next });
+  invalidateRelay(id);
   return relay;
 }
 
 export const openRelay = (id: string, ctx: RelayContext) =>
   transitionRelay(id, ["DRAFT"], "OPEN", "RELAY_OPEN", ctx);
+export const reopenRelay = (id: string, ctx: RelayContext) =>
+  transitionRelay(id, ["CLOSED"], "OPEN", "RELAY_REOPEN", ctx);
 export const closeRelay = (id: string, ctx: RelayContext) =>
   transitionRelay(id, ["OPEN"], "CLOSED", "RELAY_CLOSE", ctx);
 export const cancelRelay = (id: string, ctx: RelayContext) =>
   transitionRelay(id, ["OPEN", "CLOSED"], "CANCELLED", "RELAY_CANCEL", ctx);
+export const uncancelRelay = (id: string, ctx: RelayContext) =>
+  transitionRelay(id, ["CANCELLED"], "CLOSED", "RELAY_UNCANCEL", ctx);
 export const finishRelay = (id: string, ctx: RelayContext) =>
   transitionRelay(id, ["CLOSED"], "FINISHED", "RELAY_FINISH", ctx);
 
 export async function deleteRelay(id: string, ctx: RelayContext) {
-  const relay = await getRelayOrThrow(id);
-  if (relay.status !== "DRAFT") throw errConflict("只有草稿接龙可以删除");
-  const entries = await db.relayEntry.count({ where: { relayId: id } });
-  if (entries > 0) throw errConflict("已有报名记录的接龙不能删除");
+  await getRelayOrThrow(id);
   await db.relay.update({
     where: { id },
-    data: { deletedAt: new Date(), version: { increment: 1 } },
+    data: {
+      deletedAt: new Date(),
+      deletedById: ctx.actorId,
+      version: { increment: 1 },
+    },
   });
   await audit(ctx, "RELAY_DELETE", id, { deletedAt: null }, { deletedAt: new Date() });
+  invalidateRelay(id);
   return { id, deleted: true };
+}
+
+export async function restoreRelay(id: string, ctx: RelayContext) {
+  const before = await getDeletedRelayOrThrow(id);
+  const retention = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  if (before.deletedAt!.getTime() < retention) {
+    throw errConflict("接龙已超过 30 天恢复期限");
+  }
+  await db.relay.update({
+    where: { id },
+    data: {
+      deletedAt: null,
+      deletedById: null,
+      version: { increment: 1 },
+    },
+  });
+  await audit(ctx, "RELAY_RESTORE", id, { deletedAt: before.deletedAt }, { deletedAt: null });
+  invalidateRelay(id);
+  return { id, restored: true };
 }
 
 export async function putRelayEntry(
@@ -186,11 +232,13 @@ export async function putRelayEntry(
         userId,
         response,
         participantCount: input.participantCount,
+        companionNames: input.response === "JOINED" ? input.companionNames : [],
         note: input.note ?? null,
       },
       update: {
         response,
         participantCount: input.participantCount,
+        companionNames: input.response === "JOINED" ? input.companionNames : [],
         note: input.note ?? null,
       },
     });
@@ -204,6 +252,7 @@ export async function putRelayEntry(
     userId,
     response: result.entry.response,
     participantCount: result.entry.participantCount,
+    companionNames: result.entry.companionNames,
   });
   return result;
 }
@@ -230,7 +279,10 @@ export async function deleteRelayEntry(relayId: string, userId: string, ctx: Rel
 
 export async function listMemberRelays(input: { cursor?: string; limit: number; userId: string }) {
   const rows = await db.relay.findMany({
-    where: { deletedAt: null, status: { not: "DRAFT" } },
+    where: {
+      deletedAt: null,
+      status: { in: ["OPEN", "CLOSED"] },
+    },
     orderBy: [{ eventAt: "asc" }, { id: "asc" }],
     take: input.limit + 1,
     ...(input.cursor ? { skip: 1, cursor: { id: input.cursor } } : {}),
@@ -246,7 +298,11 @@ export async function listMemberRelays(input: { cursor?: string; limit: number; 
 
 export async function getMemberRelay(id: string, userId: string) {
   const relay = await db.relay.findFirst({
-    where: { id, deletedAt: null, status: { not: "DRAFT" } },
+    where: {
+      id,
+      deletedAt: null,
+      status: { in: ["OPEN", "CLOSED"] },
+    },
     include: {
       entries: {
         orderBy: [{ response: "asc" }, { createdAt: "asc" }],
@@ -254,6 +310,7 @@ export async function getMemberRelay(id: string, userId: string) {
           id: true,
           response: true,
           participantCount: true,
+          companionNames: true,
           note: true,
           userId: true,
           user: { select: { displayName: true } },
@@ -274,9 +331,15 @@ export async function listCaptainRelays(input: {
   cursor?: string;
   limit: number;
   status?: RelayStatus;
+  deleted?: boolean;
 }) {
   const rows = await db.relay.findMany({
-    where: { deletedAt: null, ...(input.status ? { status: input.status } : {}) },
+    where: input.deleted
+      ? { deletedAt: { not: null } }
+      : {
+          deletedAt: null,
+          ...(input.status ? { status: input.status } : {}),
+        },
     orderBy: { eventAt: "desc" },
     take: input.limit + 1,
     ...(input.cursor ? { skip: 1, cursor: { id: input.cursor } } : {}),

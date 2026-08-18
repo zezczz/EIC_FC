@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SiteHeader } from "@/components/site-header";
 
 type ApiError = { code: string; message: string; fieldErrors?: Record<string, string[]> };
 
@@ -60,9 +59,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <>
-      <SiteHeader />
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
+    <main className="flex flex-1 items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>申请加入 EIC FC</CardTitle>
@@ -134,6 +131,5 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
       </main>
-    </>
   );
 }

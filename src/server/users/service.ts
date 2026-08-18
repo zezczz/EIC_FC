@@ -1,3 +1,9 @@
+import type { Role, StaffTitle } from "@/generated/prisma/enums";
+import {
+  ALL_PERMISSIONS,
+  STAFF_TITLE_PRESETS,
+  type Permission,
+} from "@/server/auth/permissions";
 import { db } from "@/server/db";
 import { errConflict, errForbidden, errNotFound } from "@/server/errors";
 import { revokeAllSessions } from "@/server/auth/session";
@@ -210,24 +216,25 @@ export async function restoreUser(
 export async function changeUserRole(
   userId: string,
   actorId: string,
-  role: "MEMBER" | "CAPTAIN",
+  role: Role,
   ctx: ReviewContext,
+  options?: { staffTitle?: StaffTitle | null; permissions?: Permission[] },
 ) {
   if (userId === actorId) {
-    throw errForbidden("队长不能修改自己的角色");
+    throw errForbidden("不能修改自己的角色或职责");
   }
   const user = await getOrThrow(userId);
   if (user.status !== "ACTIVE") {
     throw errForbidden("只能修改 ACTIVE 用户的角色");
   }
-  if (user.role === role) {
+  if (user.role === role && role !== "STAFF") {
     throw errConflict("目标用户已是该角色");
   }
 
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
 
-    if (user.role === "CAPTAIN" && role === "MEMBER") {
+    if (user.role === "CAPTAIN" && role !== "CAPTAIN") {
       const [{ count }] = await tx.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(*)::bigint AS count
         FROM "User"
@@ -238,10 +245,23 @@ export async function changeUserRole(
       }
     }
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { role },
-    });
+    const data: {
+      role: Role;
+      staffTitle?: StaffTitle | null;
+      permissions?: string[];
+    } = { role };
+
+    if (role === "STAFF") {
+      data.staffTitle = options?.staffTitle ?? null;
+      data.permissions =
+        options?.permissions ??
+        (options?.staffTitle ? STAFF_TITLE_PRESETS[options.staffTitle] : []);
+    } else {
+      data.staffTitle = null;
+      data.permissions = [];
+    }
+
+    await tx.user.update({ where: { id: userId }, data });
   });
 
   await revokeAllSessions(userId);
@@ -251,10 +271,49 @@ export async function changeUserRole(
       action: "USER_ROLE_CHANGE",
       resourceId: userId,
       before: { role: user.role },
-      after: { role },
+      after: { role, staffTitle: options?.staffTitle ?? null, permissions: options?.permissions ?? [] },
     }),
   );
   return { id: userId, role };
+}
+
+export async function updateStaffPermissions(
+  userId: string,
+  actorId: string,
+  input: {
+    staffTitle?: StaffTitle | null;
+    permissions: Permission[];
+  },
+  ctx: ReviewContext,
+) {
+  if (userId === actorId) throw errForbidden("不能修改自己的权限");
+  const user = await getOrThrow(userId);
+  if (user.status !== "ACTIVE" || user.role !== "STAFF") {
+    throw errForbidden("只能修改 ACTIVE 管理人员的权限");
+  }
+  for (const code of input.permissions) {
+    if (!ALL_PERMISSIONS.includes(code)) {
+      throw errConflict(`无效权限: ${code}`);
+    }
+  }
+
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      staffTitle: input.staffTitle ?? null,
+      permissions: input.permissions,
+    },
+  });
+  await revokeAllSessions(userId);
+  await writeAudit(
+    auditEntry(ctx, {
+      action: "USER_PERMISSION_CHANGE",
+      resourceId: userId,
+      before: { role: user.role },
+      after: { staffTitle: input.staffTitle ?? null, permissions: input.permissions },
+    }),
+  );
+  return { id: userId, permissions: input.permissions };
 }
 
 export async function listUsers(input: {
@@ -276,6 +335,8 @@ export async function listUsers(input: {
       displayName: true,
       email: true,
       role: true,
+      staffTitle: true,
+      permissions: true,
       status: true,
       applicationMessage: true,
       reviewReason: true,

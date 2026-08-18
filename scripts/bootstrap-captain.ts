@@ -71,7 +71,7 @@ async function main() {
   const displayName = process.env.CAPTAIN_DISPLAY_NAME ?? "";
   const password = process.env.CAPTAIN_PASSWORD ?? "";
 
-  let needInteractive = !(username && email && displayName && password);
+  const needInteractive = !(username && email && displayName && password);
   const rl = needInteractive ? createInterface({ input: process.stdin, output: process.stdout }) : null;
 
   const finalUsername = username || (rl ? await promptHidden(rl, "队长用户名: ") : "");

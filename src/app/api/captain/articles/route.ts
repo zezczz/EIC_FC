@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { articleCreateSchema, articleListQuerySchema } from "@/schemas/articles";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import { createArticle, listCaptainArticles, type ArticleContext } from "@/server/articles/service";
 import { getClientIp, handle, parseJsonBody, requireSameOrigin } from "@/server/http";
 
@@ -14,7 +15,7 @@ function context(request: NextRequest, requestId: string, actorId: string): Arti
 }
 
 export const GET = handle(async (request: NextRequest, { requestId }) => {
-  await requireCaptain();
+  await requirePermission(PERMISSIONS.ARTICLES_WRITE);
   const query = articleListQuerySchema.parse({
     cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
     limit: request.nextUrl.searchParams.get("limit") ?? undefined,
@@ -27,7 +28,7 @@ export const GET = handle(async (request: NextRequest, { requestId }) => {
 
 export const POST = handle(async (request: NextRequest, { requestId }) => {
   requireSameOrigin(request);
-  const captain = await requireCaptain();
+  const captain = await requirePermission(PERMISSIONS.ARTICLES_WRITE);
   const input = await parseJsonBody(request, articleCreateSchema);
   const data = await createArticle(input, context(request, requestId, captain.id));
   return NextResponse.json({ data, requestId }, { status: 201 });

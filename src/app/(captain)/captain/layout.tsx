@@ -1,28 +1,23 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { getStaffSession } from "@/server/auth/guards";
+import { navItemsForPermissions } from "@/server/auth/permissions";
 import { getSessionUser } from "@/server/auth/session";
 
-/**
- * 队长后台布局：服务端校验 CAPTAIN + ACTIVE
- */
 export default async function CaptainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const sessionUser = await getSessionUser();
-  if (!sessionUser) redirect("/login");
-  if (sessionUser.status !== "ACTIVE") redirect("/pending");
-  if (sessionUser.role !== "CAPTAIN") redirect("/");
+  const baseUser = await getSessionUser();
+  if (!baseUser) redirect("/login");
+  if (baseUser.status !== "ACTIVE") redirect("/pending");
 
-  const nav = [
-    { href: "/captain", label: "概览" },
-    { href: "/captain/users", label: "成员审核" },
-    { href: "/captain/articles", label: "球队动态" },
-    { href: "/captain/relays", label: "活动接龙" },
-    { href: "/captain/audit", label: "审计日志" },
-  ];
+  const sessionUser = await getStaffSession(baseUser.id);
+  if (!sessionUser) redirect("/");
+
+  const nav = navItemsForPermissions(sessionUser.permissions);
 
   return (
     <>

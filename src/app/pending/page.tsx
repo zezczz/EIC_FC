@@ -8,25 +8,36 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SiteHeader } from "@/components/site-header";
-import { getSessionUser } from "@/server/auth/session";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AccountForm } from "@/components/account/account-form";
+import { getSessionUser } from "@/server/auth/session";
+import { db } from "@/server/db";
 
-/**
- * 审核状态页：不在 ACTIVE 专属 (member) 路由组内，避免重定向环。
- */
 export default async function PendingPage() {
   const sessionUser = await getSessionUser();
-  if (!sessionUser) {
-    redirect("/login");
-  }
-  if (sessionUser.status === "ACTIVE") {
-    redirect("/");
-  }
+  if (!sessionUser) redirect("/login");
+  if (sessionUser.status === "ACTIVE") redirect("/");
+
+  const user = await db.user.findUnique({
+    where: { id: sessionUser.id },
+    select: {
+      displayName: true,
+      applicationMessage: true,
+      avatarAssetId: true,
+      avatarAsset: { select: { storageKey: true, status: true } },
+      status: true,
+    },
+  });
+  if (!user) redirect("/login");
 
   const statusText: Record<string, string> = {
     PENDING: "等待队长审核",
     REJECTED: "申请未通过",
   };
+  const avatarUrl =
+    user.avatarAsset?.status === "READY" && user.avatarAsset.storageKey
+      ? `/api/media/${user.avatarAsset.storageKey}`
+      : null;
 
   return (
     <>
@@ -45,9 +56,7 @@ export default async function PendingPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <Badge>{statusText[sessionUser.status] ?? sessionUser.status}</Badge>
-              <span className="text-sm text-muted-foreground">
-                {sessionUser.displayName}
-              </span>
+              <span className="text-sm text-muted-foreground">{user.displayName}</span>
             </div>
             {sessionUser.status === "REJECTED" && sessionUser.reviewReason && (
               <p className="rounded-md bg-muted p-3 text-sm">
@@ -55,9 +64,16 @@ export default async function PendingPage() {
               </p>
             )}
             {sessionUser.status === "PENDING" && (
-              <p className="text-sm text-muted-foreground">
-                审核结果会显示在此页面，也可以重新登录查看最新状态。
-              </p>
+              <AccountForm
+                initial={{
+                  displayName: user.displayName,
+                  applicationMessage: user.applicationMessage,
+                  avatarAssetId: user.avatarAssetId,
+                  avatarUrl,
+                  status: user.status,
+                }}
+                allowApplicationMessage
+              />
             )}
             <SignOutButton />
           </CardContent>

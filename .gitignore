@@ -53,3 +53,6 @@ next-env.d.ts
 # openteam temp
 /.opencode-tmp/
 /.omo/
+
+# cloudflare tunnel credentials (local only)
+/.cloudflared/

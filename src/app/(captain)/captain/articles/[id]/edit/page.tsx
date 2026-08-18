@@ -28,6 +28,7 @@ export default async function EditArticlePage({
           subtitle: article.subtitle,
           summary: article.summary,
           contentJson: article.contentJson,
+          coverUrl: article.coverUrl,
           coverAssetId: article.coverAssetId,
           version: article.version,
         }}

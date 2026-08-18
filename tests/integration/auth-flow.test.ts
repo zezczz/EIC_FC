@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
-import { registerUser, loginUser } from "@/server/auth/service";
+import { registerUser } from "@/server/auth/service";
 import { approveUser, rejectUser } from "@/server/users/service";
 import { db } from "@/server/db";
 import { hashSessionToken } from "@/server/auth/session";

@@ -26,7 +26,15 @@ export const restoreUserSchema = z.object({
 });
 
 export const changeRoleSchema = z.object({
-  role: z.enum(["MEMBER", "CAPTAIN"]),
+  role: z.enum(["MEMBER", "STAFF", "CAPTAIN"]),
+  staffTitle: z.enum(["COACH", "VICE_CAPTAIN", "MANAGER"]).nullable().optional(),
+  permissions: z.array(z.string()).optional(),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const updateStaffPermissionsSchema = z.object({
+  staffTitle: z.enum(["COACH", "VICE_CAPTAIN", "MANAGER"]).nullable().optional(),
+  permissions: z.array(z.string()).min(1, "至少选择一项权限"),
   reason: z.string().trim().max(500).optional(),
 });
 

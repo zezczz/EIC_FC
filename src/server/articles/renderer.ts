@@ -1,7 +1,6 @@
 import { articleContentSchema, type TiptapNode } from "@/schemas/articles";
+import { isAllowedArticleImageSrc } from "@/lib/external-image";
 import { AppError } from "@/server/errors";
-
-const ALLOWED_IMAGE_PATH = /^\/api\/media\/[A-Za-z0-9/_-]+\.(?:jpe?g|png|webp)$/i;
 
 function escapeHtml(value: string): string {
   return value
@@ -68,15 +67,19 @@ function renderNode(node: TiptapNode, depth: number): string {
     case "codeBlock":
       return `<pre><code>${children}</code></pre>`;
     case "image": {
-      const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
+      const src = typeof node.attrs?.src === "string" ? node.attrs.src.trim() : "";
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
       const title = typeof node.attrs?.title === "string" ? node.attrs.title.trim() : "";
-      if (!ALLOWED_IMAGE_PATH.test(src) || !alt) {
-        throw new AppError("VALIDATION_ERROR", "正文图片必须来自媒体库并填写替代文本");
+      if (!isAllowedArticleImageSrc(src) || !alt) {
+        throw new AppError("VALIDATION_ERROR", "正文图片必须使用 https:// 图床链接并填写替代文本");
       }
+      const extraAttrs =
+        src.startsWith("https://")
+          ? ' loading="lazy" referrerpolicy="no-referrer"'
+          : ' loading="lazy"';
       return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${
         title ? ` title="${escapeHtml(title)}"` : ""
-      } loading="lazy">`;
+      }${extraAttrs}>`;
     }
     default:
       throw new AppError("VALIDATION_ERROR", `不支持的正文节点：${node.type}`);

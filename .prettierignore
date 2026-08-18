@@ -1,0 +1,8 @@
+.agents/
+.next/
+node_modules/
+src/generated/
+pnpm-lock.yaml
+coverage/
+playwright-report/
+test-results/

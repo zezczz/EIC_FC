@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auditListQuerySchema } from "@/schemas/audit";
 import { listAuditLogs } from "@/server/audit";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import { handle } from "@/server/http";
 
 export const GET = handle(async (request: NextRequest, { requestId }) => {
-  await requireCaptain();
+  await requirePermission(PERMISSIONS.AUDIT_READ);
   const query = auditListQuerySchema.parse({
     cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
     limit: request.nextUrl.searchParams.get("limit") ?? undefined,

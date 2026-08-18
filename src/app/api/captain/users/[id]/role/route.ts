@@ -5,7 +5,8 @@ import {
   requireSameOrigin,
   getClientIp,
 } from "@/server/http";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import { changeRoleSchema, uuidParamSchema } from "@/schemas/users";
 import { changeUserRole, type ReviewContext } from "@/server/users/service";
 
@@ -14,7 +15,7 @@ import { changeUserRole, type ReviewContext } from "@/server/users/service";
  */
 export const POST = handle(async (request: NextRequest, { requestId, params }) => {
   requireSameOrigin(request);
-  const captain = await requireCaptain();
+  const captain = await requirePermission(PERMISSIONS.USERS_ROLES);
   const id = uuidParamSchema.parse(params.id);
   const input = await parseJsonBody(request, changeRoleSchema);
   const ctx: ReviewContext = {
@@ -23,6 +24,9 @@ export const POST = handle(async (request: NextRequest, { requestId, params }) =
     ip: getClientIp(request),
     userAgent: request.headers.get("user-agent"),
   };
-  const result = await changeUserRole(id, captain.id, input.role, ctx);
+  const result = await changeUserRole(id, captain.id, input.role, ctx, {
+    staffTitle: input.staffTitle ?? null,
+    permissions: input.permissions as import("@/server/auth/permissions").Permission[] | undefined,
+  });
   return NextResponse.json({ data: result, requestId });
 });

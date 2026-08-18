@@ -27,7 +27,9 @@ type UserItem = {
   username: string;
   displayName: string;
   email: string;
-  role: "MEMBER" | "CAPTAIN";
+  role: "MEMBER" | "STAFF" | "CAPTAIN";
+  staffTitle?: "COACH" | "VICE_CAPTAIN" | "MANAGER" | null;
+  permissions?: string[];
   status: "PENDING" | "ACTIVE" | "REJECTED" | "SUSPENDED";
   applicationMessage: string | null;
   reviewReason: string | null;
@@ -63,8 +65,27 @@ export default function CaptainUsersClient() {
   }, [statusFilter]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    async function fetchUsers() {
+      setLoading(true);
+      try {
+        const qs = statusFilter ? `?status=${statusFilter}` : "";
+        const res = await fetch(`/api/captain/users${qs}`);
+        const body = await res.json();
+        if (!res.ok) {
+          if (!cancelled) toast.error(body.message || "加载失败");
+          return;
+        }
+        if (!cancelled) setItems(body.data.items);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void fetchUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, [statusFilter]);
 
   async function postAction(path: string, body?: unknown) {
     setBusy(true);
@@ -133,6 +154,7 @@ export default function CaptainUsersClient() {
                   </CardTitle>
                   <Badge variant="secondary">{u.status}</Badge>
                   <Badge variant="outline">{u.role}</Badge>
+                  {u.staffTitle && <Badge>{u.staffTitle}</Badge>}
                 </div>
                 <CardDescription>
                   {u.email} · 注册于 {formatDateTime(u.createdAt)}
@@ -181,18 +203,103 @@ export default function CaptainUsersClient() {
                       >
                         停用
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          void postAction(`/api/captain/users/${u.id}/role`, {
-                            role: u.role === "CAPTAIN" ? "MEMBER" : "CAPTAIN",
-                          })
-                        }
-                      >
-                        {u.role === "CAPTAIN" ? "降为队员" : "升为队长"}
-                      </Button>
+                      {u.role === "MEMBER" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void postAction(`/api/captain/users/${u.id}/role`, {
+                                role: "STAFF",
+                                staffTitle: "COACH",
+                              })
+                            }
+                          >
+                            设为教练
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void postAction(`/api/captain/users/${u.id}/role`, {
+                                role: "STAFF",
+                                staffTitle: "VICE_CAPTAIN",
+                              })
+                            }
+                          >
+                            设为副队长
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void postAction(`/api/captain/users/${u.id}/role`, {
+                                role: "STAFF",
+                                staffTitle: "MANAGER",
+                              })
+                            }
+                          >
+                            设为经理
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void postAction(`/api/captain/users/${u.id}/role`, {
+                                role: "CAPTAIN",
+                              })
+                            }
+                          >
+                            升为队长
+                          </Button>
+                        </>
+                      )}
+                      {u.role === "STAFF" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void postAction(`/api/captain/users/${u.id}/role`, {
+                                role: "MEMBER",
+                              })
+                            }
+                          >
+                            降为队员
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void postAction(`/api/captain/users/${u.id}/role`, {
+                                role: "CAPTAIN",
+                              })
+                            }
+                          >
+                            升为队长
+                          </Button>
+                        </>
+                      )}
+                      {u.role === "CAPTAIN" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            void postAction(`/api/captain/users/${u.id}/role`, {
+                              role: "MEMBER",
+                            })
+                          }
+                        >
+                          降为队员
+                        </Button>
+                      )}
                     </>
                   )}
                   {u.status === "SUSPENDED" && (

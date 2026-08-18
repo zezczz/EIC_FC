@@ -3,6 +3,8 @@ import { routeUuidParam } from "@/schemas/common";
 
 export const relayIdSchema = routeUuidParam;
 
+const companionNameSchema = z.string().trim().min(1, "姓名不能为空").max(50, "姓名过长");
+
 const relayFields = {
   title: z.string().trim().min(1, "标题不能为空").max(120),
   description: z.string().trim().max(2000),
@@ -34,6 +36,33 @@ function validateDates(
   }
 }
 
+function validateCompanionNames(
+  value: { response: "JOINED" | "DECLINED"; participantCount: number; companionNames: string[] },
+  ctx: z.RefinementCtx,
+) {
+  const expected = value.participantCount - 1;
+  if (value.response === "JOINED") {
+    if (value.companionNames.length !== expected) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["companionNames"],
+        message:
+          expected === 0
+            ? "仅本人参加时不需填写同行人员"
+            : `请填写 ${expected} 位同行人员姓名`,
+      });
+    }
+    return;
+  }
+  if (value.companionNames.length > 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["companionNames"],
+      message: "无法参加时无需填写同行人员",
+    });
+  }
+}
+
 const relayBaseSchema = z.object(relayFields);
 
 export const relayCreateSchema = relayBaseSchema.superRefine(validateDates);
@@ -43,16 +72,20 @@ export const relayUpdateSchema = relayBaseSchema
   .extend({ version: z.number().int().positive() })
   .superRefine(validateDates);
 
-export const relayEntrySchema = z.object({
-  response: z.enum(["JOINED", "DECLINED"]).default("JOINED"),
-  participantCount: z.number().int().min(1).max(20).default(1),
-  note: z.string().trim().max(300).nullable().optional(),
-});
+export const relayEntrySchema = z
+  .object({
+    response: z.enum(["JOINED", "DECLINED"]).default("JOINED"),
+    participantCount: z.number().int().min(1).max(20).default(1),
+    companionNames: z.array(companionNameSchema).default([]),
+    note: z.string().trim().max(300).nullable().optional(),
+  })
+  .superRefine(validateCompanionNames);
 
 export const relayListQuerySchema = z.object({
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   status: z.enum(["DRAFT", "OPEN", "CLOSED", "CANCELLED", "FINISHED"]).optional(),
+  deleted: z.coerce.boolean().default(false),
 });
 
 export type RelayCreateInput = z.infer<typeof relayCreateSchema>;

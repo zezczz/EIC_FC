@@ -5,7 +5,8 @@ import {
   requireSameOrigin,
   getClientIp,
 } from "@/server/http";
-import { requireCaptain } from "@/server/auth/guards";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 import { suspendUserSchema, uuidParamSchema } from "@/schemas/users";
 import { suspendUser, type ReviewContext } from "@/server/users/service";
 
@@ -14,7 +15,7 @@ import { suspendUser, type ReviewContext } from "@/server/users/service";
  */
 export const POST = handle(async (request: NextRequest, { requestId, params }) => {
   requireSameOrigin(request);
-  const captain = await requireCaptain();
+  const captain = await requirePermission(PERMISSIONS.USERS_REVIEW);
   const id = uuidParamSchema.parse(params.id);
   const input = await parseJsonBody(request, suspendUserSchema);
   const ctx: ReviewContext = {

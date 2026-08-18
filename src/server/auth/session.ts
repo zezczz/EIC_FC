@@ -4,6 +4,8 @@ import { cache } from "react";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import type { Role, UserStatus } from "@/generated/prisma/enums";
+import type { StaffTitle } from "@/generated/prisma/enums";
+import type { Permission } from "@/server/auth/permissions";
 
 /**
  * 数据库会话（ARCHITECTURE.md §7.2、§15.1）。
@@ -20,8 +22,11 @@ export type SessionUser = {
   email: string;
   displayName: string;
   role: Role;
+  staffTitle?: StaffTitle | null;
+  permissions?: Permission[];
   status: UserStatus;
   reviewReason: string | null;
+  avatarUrl?: string | null;
 };
 
 function sessionCookieOptions(): {
