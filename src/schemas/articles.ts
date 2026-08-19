@@ -4,10 +4,23 @@ import { isAllowedArticleImageSrc, isExternalHttpsUrl } from "@/lib/external-ima
 
 const tiptapMarkSchema = z
   .object({
-    type: z.enum(["bold", "italic", "strike", "link"]),
+    type: z.enum(["bold", "italic", "strike", "link", "textColor"]),
     attrs: z.record(z.string(), z.unknown()).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((mark, ctx) => {
+    if (mark.type !== "textColor") return;
+    const color = mark.attrs?.color;
+    if (
+      color !== "red" &&
+      color !== "orange" &&
+      color !== "green" &&
+      color !== "blue" &&
+      color !== "purple"
+    ) {
+      ctx.addIssue({ code: "custom", message: "文字颜色必须是预设 token" });
+    }
+  });
 
 export type TiptapNode = {
   type: string;

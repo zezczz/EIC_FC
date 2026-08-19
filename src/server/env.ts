@@ -28,11 +28,13 @@ const envSchema = z.object({
   S3_PUBLIC_BASE_URL: z.string().url(),
   S3_FORCE_PATH_STYLE: boolString,
 
-  MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(8 * 1024 * 1024),
+  MAX_IMAGE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(8 * 1024 * 1024),
   MAX_IMAGE_PIXELS: z.coerce.number().int().positive().default(40_000_000),
-  LOG_LEVEL: z
-    .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
-    .default("info"),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 });
 
 export type Env = z.infer<typeof envSchema>;

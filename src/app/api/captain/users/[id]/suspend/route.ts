@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  handle,
-  parseJsonBody,
-  requireSameOrigin,
-  getClientIp,
-} from "@/server/http";
+import { handle, parseJsonBody, requireSameOrigin, getClientIp } from "@/server/http";
 import { requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
 import { suspendUserSchema, uuidParamSchema } from "@/schemas/users";

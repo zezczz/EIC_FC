@@ -69,6 +69,33 @@ async function main() {
       console.log("[seed] 创建开发队长: devcaptain / dev-captain-password");
     }
 
+    await db.teamProfile.upsert({
+      where: { id: "default" },
+      update: {},
+      create: {
+        id: "default",
+        name: "EIC FC",
+        subtitle: "华科电信足球队",
+        honors: "",
+        summary: "与队友并肩作战，记录每一场球赛。球队动态、活动接龙，都在这里。",
+        contentJson: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "与队友并肩作战，记录每一场球赛。球队动态、活动接龙，都在这里。",
+                },
+              ],
+            },
+          ],
+        },
+        plainText: "与队友并肩作战，记录每一场球赛。球队动态、活动接龙，都在这里。",
+      },
+    });
+
     await db.article.create({
       data: {
         slug: "welcome-to-eic-fc",

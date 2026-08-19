@@ -24,6 +24,7 @@ describe("relay lifecycle", () => {
   beforeAll(async () => {
     await db.relayEntry.deleteMany();
     await db.relay.deleteMany();
+    await db.article.deleteMany();
     await db.user.deleteMany();
 
     const passwordHash = await hashPassword("captain-password-1");
@@ -139,6 +140,31 @@ describe("relay lifecycle", () => {
       ctx,
     );
 
+    const passwordHash = await hashPassword("captain-password-1");
+    const declinedMember = await db.user.create({
+      data: {
+        username: "relaydeclined",
+        usernameNormalized: "relaydeclined",
+        email: "relaydeclined@example.com",
+        emailNormalized: "relaydeclined@example.com",
+        passwordHash,
+        displayName: "拒绝队员",
+        role: "MEMBER",
+        status: "ACTIVE",
+      },
+    });
+    await putRelayEntry(
+      relay.id,
+      declinedMember.id,
+      {
+        response: "DECLINED",
+        participantCount: 1,
+        companionNames: [],
+        note: "有事无法参加",
+      },
+      ctx,
+    );
+
     const { buffer, filename } = await buildRelayExportWorkbook(relay.id);
     expect(buffer.byteLength).toBeGreaterThan(1000);
     expect(filename.endsWith(".xlsx")).toBe(true);
@@ -151,6 +177,24 @@ describe("relay lifecycle", () => {
     expect(joinedRows).toContain("接龙队员");
     expect(joinedRows).toContain("王五");
     expect(joinedRows).toContain("同行人员");
+    expect(joinedRows).toContain("准时到");
+
+    const infoSheet = workbook.getWorksheet("活动信息");
+    expect(infoSheet).toBeTruthy();
+    const infoRows = sheetToText(infoSheet!);
+    expect(infoRows).toContain("正式参加人员");
+    expect(infoRows).toContain("接龙队员");
+    expect(infoRows).toContain("王五");
+    expect(infoRows).toContain("无法参加人员");
+    expect(infoRows).toContain("拒绝队员");
+    expect(infoRows).toContain("无法参加人数");
+
+    const rosterRows = collectRosterRows(infoSheet!);
+    expect(rosterRows.header).toEqual(["姓名", "状态", "备注"]);
+    expect(rosterRows.entries).toContainEqual(["接龙队员", "join", "准时到"]);
+    expect(rosterRows.entries).toContainEqual(["拒绝队员", "declined", "有事无法参加"]);
+    expect(infoRows).not.toContain("接龙队员 join 准时到");
+    expect(infoRows).not.toContain("拒绝队员 declined 有事无法参加");
   });
 });
 
@@ -164,4 +208,41 @@ function sheetToText(sheet: ExcelJS.Worksheet) {
     row.eachCell((cell) => parts.push(String(cell.value ?? "")));
   });
   return parts.join("\n");
+}
+
+function cellText(sheet: ExcelJS.Worksheet, row: number, column: number) {
+  return String(sheet.getCell(row, column).value ?? "");
+}
+
+function collectRosterRows(sheet: ExcelJS.Worksheet) {
+  let headerRow = 0;
+  sheet.eachRow((row) => {
+    if (
+      cellText(sheet, row.number, 1) === "姓名" &&
+      cellText(sheet, row.number, 2) === "状态" &&
+      cellText(sheet, row.number, 3) === "备注"
+    ) {
+      headerRow = row.number;
+    }
+  });
+  expect(headerRow).toBeGreaterThan(0);
+
+  const entries: string[][] = [];
+  sheet.eachRow((row) => {
+    if (row.number <= headerRow) return;
+    entries.push([
+      cellText(sheet, row.number, 1),
+      cellText(sheet, row.number, 2),
+      cellText(sheet, row.number, 3),
+    ]);
+  });
+
+  return {
+    header: [
+      cellText(sheet, headerRow, 1),
+      cellText(sheet, headerRow, 2),
+      cellText(sheet, headerRow, 3),
+    ],
+    entries,
+  };
 }

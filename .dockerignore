@@ -4,6 +4,10 @@ node_modules
 .git
 .gitignore
 .opencode-tmp
+.agents
+.claude
+.windsurf
+.cursor
 .env
 .env.*
 !.env.example
@@ -16,5 +20,4 @@ compose.*.yml
 Caddyfile
 tests
 *.md
-!ARCHITECTURE.md
 src/generated/prisma

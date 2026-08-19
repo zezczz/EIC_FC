@@ -3,8 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArticleActions } from "@/components/captain/article-actions";
+import { PageHeader } from "@/components/brand/page-header";
 import { formatDateTime } from "@/lib/format";
 import { listCaptainArticles } from "@/server/articles/service";
+import { requireAnyPermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 
 export const metadata = { title: "文章管理", robots: { index: false } };
 
@@ -15,17 +18,21 @@ export default async function CaptainArticlesPage({
 }) {
   const query = await searchParams;
   const deleted = query.deleted === "true";
+  await requireAnyPermission(
+    PERMISSIONS.ARTICLES_READ,
+    PERMISSIONS.ARTICLES_WRITE,
+    PERMISSIONS.ARTICLES_PUBLISH,
+  );
   const { items } = await listCaptainArticles({ limit: 50, deleted });
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">球队动态</h1>
-          <p className="text-muted-foreground text-sm">管理草稿、发布状态和置顶顺序</p>
-        </div>
-        <Button render={<Link href="/captain/articles/new" />}>新建文章</Button>
-      </div>
+      <PageHeader
+        eyebrow="Newsroom"
+        title="球队动态"
+        description="管理草稿、发布状态和置顶顺序"
+        actions={<Button render={<Link href="/captain/articles/new" />}>新建文章</Button>}
+      />
       <div className="flex gap-2">
         <Button
           size="sm"

@@ -9,6 +9,7 @@ describe("profile flow", () => {
   beforeAll(async () => {
     await db.relayEntry.deleteMany();
     await db.relay.deleteMany();
+    await db.article.deleteMany();
     await db.user.deleteMany();
     const passwordHash = await hashPassword("member-password-1");
     const user = await db.user.create({
@@ -33,5 +34,21 @@ describe("profile flow", () => {
       { actorId: userId, requestId: "profile-test" },
     );
     expect(updated.displayName).toBe("资料测试昵称");
+  });
+
+  it("updates signature and student id for self", async () => {
+    const updated = await updateProfile(
+      userId,
+      {
+        signature: "永不独行",
+        studentId: "U2020001",
+        fieldPositions: ["ST"],
+        preferredFoot: "RIGHT",
+      },
+      { actorId: userId, requestId: "profile-test-2" },
+    );
+    expect(updated.signature).toBe("永不独行");
+    expect(updated.studentId).toBe("U2020001");
+    expect(updated.fieldPositions).toEqual(["ST"]);
   });
 });

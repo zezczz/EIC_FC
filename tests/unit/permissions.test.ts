@@ -17,16 +17,16 @@ describe("permissions", () => {
     expect(granted).toEqual(ALL_PERMISSIONS);
   });
 
-  it("staff uses preset when permissions empty", () => {
+  it("empty permissions mean no access even for staff", () => {
     const granted = resolveUserPermissions({
       role: "STAFF",
       staffTitle: "COACH",
       permissions: [],
     });
-    expect(granted).toEqual(STAFF_TITLE_PRESETS.COACH);
+    expect(granted).toEqual([]);
   });
 
-  it("staff custom permissions override preset", () => {
+  it("staff stored permissions are used as-is with implied reads", () => {
     const granted = resolveUserPermissions({
       role: "STAFF",
       staffTitle: "COACH",
@@ -35,12 +35,30 @@ describe("permissions", () => {
     expect(granted).toEqual([PERMISSIONS.AUDIT_READ]);
   });
 
-  it("member has no permissions", () => {
+  it("write permissions imply matching read permissions", () => {
+    const granted = resolveUserPermissions({
+      role: "MEMBER",
+      staffTitle: null,
+      permissions: [PERMISSIONS.ARTICLES_WRITE, PERMISSIONS.RELAYS_WRITE],
+    });
+    expect(granted).toEqual([
+      PERMISSIONS.ARTICLES_READ,
+      PERMISSIONS.ARTICLES_WRITE,
+      PERMISSIONS.RELAYS_READ,
+      PERMISSIONS.RELAYS_WRITE,
+    ]);
+  });
+
+  it("member has no permissions by default", () => {
     expect(
       hasPermission(
         resolveUserPermissions({ role: "MEMBER", staffTitle: null, permissions: [] }),
         PERMISSIONS.RELAYS_WRITE,
       ),
     ).toBe(false);
+  });
+
+  it("coach preset still includes relay write", () => {
+    expect(STAFF_TITLE_PRESETS.COACH).toContain(PERMISSIONS.RELAYS_WRITE);
   });
 });

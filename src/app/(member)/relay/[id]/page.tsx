@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { RelayEntryForm } from "@/components/relay/relay-entry-form";
 import { formatDateTime } from "@/lib/format";
+import { RELAY_RESPONSE_LABELS } from "@/lib/relay-labels";
 import { getSessionUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { getMemberRelay } from "@/server/relays/service";
@@ -26,10 +27,13 @@ export default async function RelayDetailPage({ params }: PageProps<"/relay/[id]
             <Badge>{relay.status}</Badge>
             {relay.capacityInfo.overCapacity && <Badge variant="destructive">当前超额</Badge>}
           </div>
+          <p className="font-brand text-primary mb-3 text-[0.7rem] tracking-[0.28em] uppercase">
+            Matchday
+          </p>
           <h1 className="text-3xl font-black">{relay.title}</h1>
           <p className="text-muted-foreground mt-4 whitespace-pre-wrap">{relay.description}</p>
         </div>
-        <dl className="grid gap-3 rounded-xl border p-5 text-sm sm:grid-cols-2">
+        <dl className="border-sideline bg-card grid gap-3 rounded-xl border p-5 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">活动时间</dt>
             <dd>{formatDateTime(relay.eventAt)}</dd>
@@ -70,8 +74,11 @@ export default async function RelayDetailPage({ params }: PageProps<"/relay/[id]
                         同行：{entry.companionNames.join("、")}
                       </p>
                     )}
+                    {entry.note && (
+                      <p className="text-muted-foreground mt-1 text-xs">备注：{entry.note}</p>
+                    )}
                   </div>
-                  <Badge variant="outline">{entry.response}</Badge>
+                  <Badge variant="outline">{RELAY_RESPONSE_LABELS[entry.response]}</Badge>
                 </div>
               ))
             )}

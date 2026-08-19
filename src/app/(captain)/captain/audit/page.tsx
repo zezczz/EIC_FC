@@ -1,18 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
+import { PageHeader } from "@/components/brand/page-header";
 import { listAuditLogs } from "@/server/audit";
+import { requirePermission } from "@/server/auth/guards";
+import { PERMISSIONS } from "@/server/auth/permissions";
 
 export const metadata = { title: "审计日志", robots: { index: false } };
 
 export default async function AuditPage() {
+  await requirePermission(PERMISSIONS.AUDIT_READ);
   const { items } = await listAuditLogs({ limit: 100 });
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">审计日志</h1>
-        <p className="text-muted-foreground text-sm">敏感操作只追加记录，不允许修改。</p>
-      </div>
+      <PageHeader eyebrow="Audit" title="审计日志" description="敏感操作只追加记录，不允许修改。" />
       {items.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center">

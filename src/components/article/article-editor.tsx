@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { assertExternalHttpsUrl } from "@/lib/external-image";
 import { MarkdownImportError, markdownToTiptapDocument } from "@/lib/markdown-to-tiptap";
+import { TextColor } from "@/components/article/text-color";
+import { TEXT_COLOR_LABELS, TEXT_COLOR_TOKENS } from "@/lib/text-colors";
 
 type InitialArticle = {
   id: string;
@@ -23,6 +25,7 @@ type InitialArticle = {
   coverUrl: string | null;
   coverAssetId: string | null;
   version: number;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 };
 
 const EMPTY_DOC = { type: "doc", content: [{ type: "paragraph" }] };
@@ -41,6 +44,7 @@ export function ArticleEditor({ initial }: { initial?: InitialArticle }) {
       StarterKit.configure({ heading: { levels: [2, 3, 4] }, link: false }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
       ImageExtension.configure({ allowBase64: false }),
+      TextColor,
     ],
     content: initial?.contentJson ?? EMPTY_DOC,
     editorProps: {
@@ -114,7 +118,15 @@ export function ArticleEditor({ initial }: { initial?: InitialArticle }) {
       );
       const body = await response.json();
       if (!response.ok) throw new Error(body.message || "保存失败");
-      toast.success("草稿已保存");
+      if (initial) {
+        toast.success(
+          initial.status === "PUBLISHED"
+            ? "内容已更新，公开页面将显示最新版本"
+            : "内容已更新，发布后访客方可访问",
+        );
+      } else {
+        toast.success("草稿已保存，发布前访客无法访问公开页面");
+      }
       router.push(`/captain/articles/${body.data.id}/edit`);
       router.refresh();
     } catch (error) {
@@ -130,6 +142,10 @@ export function ArticleEditor({ initial }: { initial?: InitialArticle }) {
         <p className="font-medium">Markdown 与图片说明</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>支持导入 `.md` 文件，正文会转换为编辑器内容。</li>
+          <li>
+            彩色字体语法：`{"{red}红字{/red}"}`、`{"{orange}"}`、`{"{green}"}`、`{"{blue}"}`、`
+            {"{purple}"}`。
+          </li>
           <li>封面和正文图片请先上传到外部图床，再粘贴公开可访问的 `https://` 链接。</li>
           <li>本站不会保存文章图片，本地路径、HTTP 或 base64 图片都会被拒绝。</li>
           <li>每张图片都需要填写替代文本（alt）。</li>
@@ -233,6 +249,25 @@ export function ArticleEditor({ initial }: { initial?: InitialArticle }) {
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={insertHostedImage}>
           插入图床图片
+        </Button>
+        {TEXT_COLOR_TOKENS.map((color) => (
+          <Button
+            key={color}
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor?.chain().focus().setTextColor(color).run()}
+          >
+            {TEXT_COLOR_LABELS[color]}
+          </Button>
+        ))}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => editor?.chain().focus().unsetTextColor().run()}
+        >
+          清除颜色
         </Button>
       </div>
       <EditorContent editor={editor} />

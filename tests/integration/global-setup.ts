@@ -14,8 +14,7 @@ function loadTestEnv() {
   } else if (existsSync(".env.example")) {
     loadDotenv({ path: ".env.example", override: true });
   }
-  process.env.DATABASE_URL ||=
-    "postgresql://eicfc:eicfc_dev_password@127.0.0.1:5432/eicfc_test";
+  process.env.DATABASE_URL ||= "postgresql://eicfc:eicfc_dev_password@127.0.0.1:5432/eicfc_test";
   process.env.DIRECT_URL ||= process.env.DATABASE_URL;
 }
 
@@ -23,9 +22,7 @@ export default function globalSetup() {
   loadTestEnv();
   const url = process.env.DATABASE_URL ?? "";
   if (!/localhost|127\.0\.0\.1/.test(url)) {
-    throw new Error(
-      `集成测试只允许在本地数据库执行，当前 DATABASE_URL 不指向 localhost: ${url}`,
-    );
+    throw new Error(`集成测试只允许在本地数据库执行，当前 DATABASE_URL 不指向 localhost: ${url}`);
   }
   if (!/_test\b|eicfc_test/.test(url) && !process.env.ALLOW_INTEGRATION_ON_DEV_DB) {
     console.warn(

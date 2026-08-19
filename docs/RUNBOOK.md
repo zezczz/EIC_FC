@@ -2,7 +2,7 @@
 
 ## 本地开发一键启动
 
-Windows 推荐使用项目根目录的 [start-dev.cmd](start-dev.cmd)（双击即可），或在仓库根目录执行：
+Windows 推荐使用项目根目录的 [start-dev.cmd](../start-dev.cmd)（双击即可），或在仓库根目录执行：
 
 ```powershell
 pnpm dev:local
@@ -21,12 +21,12 @@ pnpm dev:local
 
 可选参数：
 
-| 参数 | 说明 |
-|------|------|
-| `-SkipDocker` | 跳过 Docker 启动 |
-| `-SkipMigrate` | 跳过数据库迁移 |
+| 参数           | 说明             |
+| -------------- | ---------------- |
+| `-SkipDocker`  | 跳过 Docker 启动 |
+| `-SkipMigrate` | 跳过数据库迁移   |
 | `-SkipBrowser` | 不自动打开浏览器 |
-| `-Port 3001` | 使用其他端口 |
+| `-Port 3001`   | 使用其他端口     |
 
 示例：
 
@@ -37,24 +37,34 @@ pnpm dev:local
 
 ### 本地启动常见故障
 
-| 现象 | 排查 |
-|------|------|
-| 端口 3000 被占用 | 脚本会显示 PID；执行 `taskkill /PID <pid> /F` 或关闭旧终端 |
-| Docker 未就绪 | 手动打开 Docker Desktop，再重试 `start-dev.cmd` |
-| 页面报 Prisma 字段错误 | 执行 `pnpm prisma generate` 后重启 dev |
-| 无队长账号 | 执行 `pnpm captain:bootstrap` |
+| 现象                   | 排查                                                       |
+| ---------------------- | ---------------------------------------------------------- |
+| 端口 3000 被占用       | 脚本会显示 PID；执行 `taskkill /PID <pid> /F` 或关闭旧终端 |
+| Docker 未就绪          | 手动打开 Docker Desktop，再重试 `start-dev.cmd`            |
+| 页面报 Prisma 字段错误 | 执行 `pnpm prisma generate` 后重启 dev                     |
+| 无队长账号             | 执行 `pnpm captain:bootstrap`                              |
 
-测试账号：`captain` / `TestCaptain123!`，`testmember01` / `TestMember123!`
+### 本地账号从哪来
+
+仓库**不会**自动创建 `captain` / `testmember01`。按来源区分：
+
+| 来源         | 命令                                    | 账号                                  | 用途                                   |
+| ------------ | --------------------------------------- | ------------------------------------- | -------------------------------------- |
+| 开发种子     | `pnpm db:seed`                          | `devcaptain` / `dev-captain-password` | 空库演示数据；E2E 动态详情依赖此账号   |
+| 首位队长     | `pnpm captain:bootstrap`                | 由 `CAPTAIN_*` 环境变量决定           | 正式/首次队长；README 示例为 `captain` |
+| 手动验证脚本 | `pnpm tsx scripts/local-verify-flow.ts` | 脚本内写死 `captain`、`testmember01`  | 需事先按该凭据建号，脚本不会创建用户   |
+
+生产环境禁止使用 seed 默认密码。
 
 ## 常见故障
 
-| 现象 | 排查 |
-|------|------|
+| 现象              | 排查                                                                           |
+| ----------------- | ------------------------------------------------------------------------------ |
 | 502 / Bad Gateway | `docker compose -f compose.prod.yml ps`，查 app 日志，确认 `/api/health/ready` |
-| 登录无效 | Cookie Secure/域名是否匹配 HTTPS；查 Session 表与用户 status |
-| 上传失败 | S3 凭证、bucket、预签名与 complete 校验；看 media 状态 |
-| 接龙超卖 | 确认使用事务与 `FOR UPDATE`；查看 RelayEntry 唯一约束 |
-| 证书失败 | Caddy 日志、80 是否可达、DNS 是否正确 |
+| 登录无效          | Cookie Secure/域名是否匹配 HTTPS；查 Session 表与用户 status                   |
+| 上传失败          | S3 凭证、bucket、预签名与 complete 校验；看 media 状态                         |
+| 接龙超卖          | 确认使用事务与 `FOR UPDATE`；查看 RelayEntry 唯一约束                          |
+| 证书失败          | Caddy 日志、80 是否可达、DNS 是否正确                                          |
 
 ## 队长账号恢复
 

@@ -76,17 +76,13 @@ export const errValidation = (
   fieldErrors?: Record<string, string[] | undefined>,
 ) => new AppError("VALIDATION_ERROR", message, { fieldErrors });
 
-export const errUnauthorized = (message = "请先登录") =>
-  new AppError("UNAUTHORIZED", message);
+export const errUnauthorized = (message = "请先登录") => new AppError("UNAUTHORIZED", message);
 
-export const errForbidden = (message = "没有权限执行此操作") =>
-  new AppError("FORBIDDEN", message);
+export const errForbidden = (message = "没有权限执行此操作") => new AppError("FORBIDDEN", message);
 
-export const errNotFound = (message = "资源不存在") =>
-  new AppError("NOT_FOUND", message);
+export const errNotFound = (message = "资源不存在") => new AppError("NOT_FOUND", message);
 
-export const errConflict = (message: string) =>
-  new AppError("CONFLICT", message);
+export const errConflict = (message: string) => new AppError("CONFLICT", message);
 
 export const errVersionConflict = (message = "数据已被其他人修改，请刷新后重试") =>
   new AppError("VERSION_CONFLICT", message);

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { relayIdSchema, relayUpdateSchema } from "@/schemas/relays";
-import { requirePermission } from "@/server/auth/guards";
+import { requireAnyPermission, requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
 import { handle, parseJsonBody, requireSameOrigin } from "@/server/http";
 import { relayRequestContext } from "@/server/relays/route-context";
 import { deleteRelay, getCaptainRelay, updateRelay } from "@/server/relays/service";
 
 export const GET = handle(async (_request: NextRequest, { requestId, params }) => {
-  await requirePermission(PERMISSIONS.RELAYS_WRITE);
+  await requireAnyPermission(PERMISSIONS.RELAYS_READ, PERMISSIONS.RELAYS_WRITE);
   const data = await getCaptainRelay(relayIdSchema.parse(params.id));
   return NextResponse.json({ data, requestId });
 });

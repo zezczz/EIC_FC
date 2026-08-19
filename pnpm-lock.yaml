@@ -29,6 +29,9 @@ importers:
       '@prisma/client':
         specifier: ^7.9.1
         version: 7.9.1(prisma@7.9.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@5.9.3))(typescript@5.9.3)
+      '@tiptap/core':
+        specifier: ^3.29.2
+        version: 3.29.2(@tiptap/pm@3.29.2)
       '@tiptap/extension-image':
         specifier: ^3.29.2
         version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))

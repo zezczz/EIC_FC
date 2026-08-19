@@ -47,9 +47,7 @@ function validateCompanionNames(
         code: "custom",
         path: ["companionNames"],
         message:
-          expected === 0
-            ? "仅本人参加时不需填写同行人员"
-            : `请填写 ${expected} 位同行人员姓名`,
+          expected === 0 ? "仅本人参加时不需填写同行人员" : `请填写 ${expected} 位同行人员姓名`,
       });
     }
     return;

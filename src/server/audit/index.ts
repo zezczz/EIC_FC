@@ -25,6 +25,7 @@ const SENSITIVE_KEYS = new Set([
   "emailNormalized",
   "phone",
   "mobile",
+  "studentId",
 ]);
 
 export function redact(value: unknown): unknown {

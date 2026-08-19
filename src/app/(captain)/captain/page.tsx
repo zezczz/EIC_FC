@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/brand/page-header";
 import { db } from "@/server/db";
 
 export default async function CaptainHomePage() {
@@ -17,21 +18,18 @@ export default async function CaptainHomePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">队长后台</h1>
-        <p className="text-sm text-muted-foreground">管理成员、球队动态与活动接龙</p>
-      </div>
+      <PageHeader eyebrow="Captain" title="队长后台" description="管理成员、球队动态与活动接龙" />
       <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((c) => (
           <Link key={c.href} href={c.href}>
-            <Card className="transition-shadow hover:shadow-md">
+            <Card className="hover:ring-primary/20 transition-shadow hover:shadow-md">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
                   {c.title}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{c.value}</p>
+                <p className="font-brand text-4xl font-bold tracking-wide">{c.value}</p>
               </CardContent>
             </Card>
           </Link>

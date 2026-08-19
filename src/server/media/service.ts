@@ -165,10 +165,20 @@ export async function completeUpload(id: string, ctx: MediaContext) {
 export async function deleteMedia(id: string, ctx: MediaContext) {
   const asset = await db.mediaAsset.findUnique({
     where: { id },
-    include: { avatarUser: { select: { id: true } }, articleCovers: { select: { id: true } } },
+    include: {
+      avatarUser: { select: { id: true } },
+      articleCovers: { select: { id: true } },
+      teamCrest: { select: { id: true } },
+      teamGallery: { select: { id: true } },
+    },
   });
   if (!asset || asset.deletedAt) throw errNotFound("媒体不存在");
-  if (asset.avatarUser || asset.articleCovers.length > 0) {
+  if (
+    asset.avatarUser ||
+    asset.articleCovers.length > 0 ||
+    asset.teamCrest ||
+    asset.teamGallery.length > 0
+  ) {
     throw errConflict("媒体正在使用中，不能删除");
   }
   await s3.send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: asset.storageKey }));

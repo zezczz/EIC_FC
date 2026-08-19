@@ -41,7 +41,11 @@ export function RelayActions({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" variant="outline" onClick={() => window.open(`/api/captain/relays/${id}/export`, "_blank")}>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => window.open(`/api/captain/relays/${id}/export`, "_blank")}
+      >
         导出 Excel
       </Button>
       {status === "DRAFT" && (

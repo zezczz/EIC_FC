@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { errForbidden, errUnauthorized } from "@/server/errors";
 import {
   canAccessCaptainArea,
+  hasAnyPermission,
   hasPermission,
   resolveUserPermissions,
   type Permission,
@@ -34,7 +35,9 @@ async function freshUserRecord(userId: string) {
   });
 }
 
-function toSessionUser(fresh: NonNullable<Awaited<ReturnType<typeof freshUserRecord>>>): StaffSessionUser {
+function toSessionUser(
+  fresh: NonNullable<Awaited<ReturnType<typeof freshUserRecord>>>,
+): StaffSessionUser {
   const permissions = resolveUserPermissions({
     role: fresh.role,
     staffTitle: fresh.staffTitle,
@@ -99,11 +102,17 @@ export async function requireStaffAccess(): Promise<StaffSessionUser> {
   return sessionUser;
 }
 
-export async function requirePermission(
-  ...required: Permission[]
-): Promise<StaffSessionUser> {
+export async function requirePermission(...required: Permission[]): Promise<StaffSessionUser> {
   const sessionUser = await requireStaffAccess();
   if (!hasPermission(sessionUser.permissions, required)) {
+    throw errForbidden("无权执行此操作");
+  }
+  return sessionUser;
+}
+
+export async function requireAnyPermission(...required: Permission[]): Promise<StaffSessionUser> {
+  const sessionUser = await requireStaffAccess();
+  if (!hasAnyPermission(sessionUser.permissions, required)) {
     throw errForbidden("无权执行此操作");
   }
   return sessionUser;

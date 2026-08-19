@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { articleIdSchema, articleUpdateSchema } from "@/schemas/articles";
-import { requirePermission } from "@/server/auth/guards";
+import { requireAnyPermission, requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
 import {
   deleteArticle,
@@ -20,7 +20,11 @@ function context(request: NextRequest, requestId: string, actorId: string): Arti
 }
 
 export const GET = handle(async (_request: NextRequest, { requestId, params }) => {
-  await requirePermission(PERMISSIONS.ARTICLES_WRITE);
+  await requireAnyPermission(
+    PERMISSIONS.ARTICLES_READ,
+    PERMISSIONS.ARTICLES_WRITE,
+    PERMISSIONS.ARTICLES_PUBLISH,
+  );
   const data = await getCaptainArticle(articleIdSchema.parse(params.id));
   return NextResponse.json({ data, requestId });
 });

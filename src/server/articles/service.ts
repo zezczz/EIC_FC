@@ -86,10 +86,15 @@ async function audit(
 }
 
 function invalidate(slug?: string) {
-  revalidatePath("/");
-  revalidatePath("/news");
-  if (slug) revalidatePath(`/news/${slug}`);
-  revalidatePath("/captain/articles");
+  try {
+    revalidatePath("/");
+    revalidatePath("/news");
+    revalidatePath("/news/[slug]", "page");
+    if (slug) revalidatePath(`/news/${slug}`);
+    revalidatePath("/captain/articles");
+  } catch {
+    // 非 Next.js 请求上下文（测试/脚本）忽略缓存刷新
+  }
 }
 
 export async function createArticle(input: ArticleCreateInput, ctx: ArticleContext) {

@@ -15,8 +15,7 @@ export function assertExternalHttpsUrl(value: string, label = "链接"): string 
   return trimmed;
 }
 
-export const LEGACY_MEDIA_IMAGE_PATH =
-  /^\/api\/media\/[A-Za-z0-9/_-]+\.(?:jpe?g|png|webp)$/i;
+export const LEGACY_MEDIA_IMAGE_PATH = /^\/api\/media\/[A-Za-z0-9/_-]+\.(?:jpe?g|png|webp)$/i;
 
 export function isAllowedArticleImageSrc(value: string): boolean {
   const trimmed = value.trim();

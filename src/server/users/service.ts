@@ -2,8 +2,10 @@ import type { Role, StaffTitle } from "@/generated/prisma/enums";
 import {
   ALL_PERMISSIONS,
   STAFF_TITLE_PRESETS,
+  normalizeGrantedPermissions,
   type Permission,
 } from "@/server/auth/permissions";
+import { persistProfilePermissions } from "@/server/users/profile-access";
 import { db } from "@/server/db";
 import { errConflict, errForbidden, errNotFound } from "@/server/errors";
 import { revokeAllSessions } from "@/server/auth/session";
@@ -17,7 +19,7 @@ type UserBrief = {
   id: string;
   username: string;
   status: string;
-  role: string;
+  role: Role;
 };
 
 export type ReviewContext = {
@@ -59,11 +61,7 @@ async function getOrThrow(userId: string): Promise<UserBrief> {
   return user;
 }
 
-export async function approveUser(
-  userId: string,
-  reviewerId: string,
-  ctx: ReviewContext,
-) {
+export async function approveUser(userId: string, reviewerId: string, ctx: ReviewContext) {
   if (userId === reviewerId) {
     throw errForbidden("队长不能审核自己的注册申请");
   }
@@ -184,11 +182,7 @@ export async function suspendUser(
   return { id: userId, status: "SUSPENDED" as const };
 }
 
-export async function restoreUser(
-  userId: string,
-  actorId: string,
-  ctx: ReviewContext,
-) {
+export async function restoreUser(userId: string, actorId: string, ctx: ReviewContext) {
   const user = await getOrThrow(userId);
   const result = await db.user.updateMany({
     where: { id: userId, status: "SUSPENDED" },
@@ -218,7 +212,12 @@ export async function changeUserRole(
   actorId: string,
   role: Role,
   ctx: ReviewContext,
-  options?: { staffTitle?: StaffTitle | null; permissions?: Permission[] },
+  options?: {
+    staffTitle?: StaffTitle | null;
+    teamTitle?: string | null;
+    permissions?: Permission[];
+    profilePermissions?: string[];
+  },
 ) {
   if (userId === actorId) {
     throw errForbidden("不能修改自己的角色或职责");
@@ -227,9 +226,28 @@ export async function changeUserRole(
   if (user.status !== "ACTIVE") {
     throw errForbidden("只能修改 ACTIVE 用户的角色");
   }
-  if (user.role === role && role !== "STAFF") {
+  if (
+    user.role === role &&
+    role !== "STAFF" &&
+    options?.permissions === undefined &&
+    options?.teamTitle === undefined
+  ) {
     throw errConflict("目标用户已是该角色");
   }
+
+  const permissions =
+    role === "CAPTAIN"
+      ? []
+      : normalizeGrantedPermissions(
+          options?.permissions ??
+            (role === "STAFF" && options?.staffTitle
+              ? STAFF_TITLE_PRESETS[options.staffTitle]
+              : []),
+        );
+  const profilePermissions =
+    options?.profilePermissions !== undefined
+      ? persistProfilePermissions(options.profilePermissions)
+      : undefined;
 
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
@@ -248,18 +266,18 @@ export async function changeUserRole(
     const data: {
       role: Role;
       staffTitle?: StaffTitle | null;
+      teamTitle?: string | null;
       permissions?: string[];
-    } = { role };
+      profilePermissions?: string[];
+    } = { role, permissions };
 
     if (role === "STAFF") {
       data.staffTitle = options?.staffTitle ?? null;
-      data.permissions =
-        options?.permissions ??
-        (options?.staffTitle ? STAFF_TITLE_PRESETS[options.staffTitle] : []);
     } else {
       data.staffTitle = null;
-      data.permissions = [];
     }
+    if (options?.teamTitle !== undefined) data.teamTitle = options.teamTitle;
+    if (profilePermissions) data.profilePermissions = profilePermissions;
 
     await tx.user.update({ where: { id: userId }, data });
   });
@@ -271,7 +289,12 @@ export async function changeUserRole(
       action: "USER_ROLE_CHANGE",
       resourceId: userId,
       before: { role: user.role },
-      after: { role, staffTitle: options?.staffTitle ?? null, permissions: options?.permissions ?? [] },
+      after: {
+        role,
+        staffTitle: options?.staffTitle ?? null,
+        teamTitle: options?.teamTitle ?? null,
+        permissions,
+      },
     }),
   );
   return { id: userId, role };
@@ -281,15 +304,56 @@ export async function updateStaffPermissions(
   userId: string,
   actorId: string,
   input: {
+    role?: "MEMBER" | "STAFF";
     staffTitle?: StaffTitle | null;
+    teamTitle?: string | null;
     permissions: Permission[];
+    profilePermissions?: string[];
   },
   ctx: ReviewContext,
 ) {
-  if (userId === actorId) throw errForbidden("不能修改自己的权限");
   const user = await getOrThrow(userId);
-  if (user.status !== "ACTIVE" || user.role !== "STAFF") {
-    throw errForbidden("只能修改 ACTIVE 管理人员的权限");
+  if (userId === actorId) {
+    if (user.role !== "CAPTAIN" || input.teamTitle === undefined) {
+      throw errForbidden("不能修改自己的权限");
+    }
+    await db.user.update({
+      where: { id: userId },
+      data: { teamTitle: input.teamTitle },
+    });
+    await writeAudit(
+      auditEntry(ctx, {
+        action: "USER_PERMISSION_CHANGE",
+        resourceId: userId,
+        after: { teamTitle: input.teamTitle },
+      }),
+    );
+    return {
+      id: userId,
+      permissions: ALL_PERMISSIONS,
+      profilePermissions: input.profilePermissions,
+    };
+  }
+  if (user.status !== "ACTIVE") {
+    throw errForbidden("只能修改 ACTIVE 用户的权限");
+  }
+  if (user.role === "CAPTAIN") {
+    await db.user.update({
+      where: { id: userId },
+      data: { teamTitle: input.teamTitle === undefined ? undefined : input.teamTitle },
+    });
+    await writeAudit(
+      auditEntry(ctx, {
+        action: "USER_PERMISSION_CHANGE",
+        resourceId: userId,
+        after: { teamTitle: input.teamTitle ?? null },
+      }),
+    );
+    return {
+      id: userId,
+      permissions: ALL_PERMISSIONS,
+      profilePermissions: input.profilePermissions,
+    };
   }
   for (const code of input.permissions) {
     if (!ALL_PERMISSIONS.includes(code)) {
@@ -297,11 +361,22 @@ export async function updateStaffPermissions(
     }
   }
 
+  const role: "MEMBER" | "STAFF" = input.role ?? (user.role === "STAFF" ? "STAFF" : "MEMBER");
+
+  const permissions = normalizeGrantedPermissions(input.permissions);
+  const profilePermissions =
+    input.profilePermissions !== undefined
+      ? persistProfilePermissions(input.profilePermissions)
+      : undefined;
+
   await db.user.update({
     where: { id: userId },
     data: {
-      staffTitle: input.staffTitle ?? null,
-      permissions: input.permissions,
+      role,
+      staffTitle: role === "STAFF" ? (input.staffTitle ?? null) : null,
+      teamTitle: input.teamTitle === undefined ? undefined : input.teamTitle,
+      permissions,
+      ...(profilePermissions ? { profilePermissions } : {}),
     },
   });
   await revokeAllSessions(userId);
@@ -310,10 +385,16 @@ export async function updateStaffPermissions(
       action: "USER_PERMISSION_CHANGE",
       resourceId: userId,
       before: { role: user.role },
-      after: { staffTitle: input.staffTitle ?? null, permissions: input.permissions },
+      after: {
+        role,
+        staffTitle: role === "STAFF" ? (input.staffTitle ?? null) : null,
+        teamTitle: input.teamTitle ?? null,
+        permissions,
+        profilePermissions,
+      },
     }),
   );
-  return { id: userId, permissions: input.permissions };
+  return { id: userId, permissions, profilePermissions };
 }
 
 export async function listUsers(input: {
@@ -336,7 +417,9 @@ export async function listUsers(input: {
       email: true,
       role: true,
       staffTitle: true,
+      teamTitle: true,
       permissions: true,
+      profilePermissions: true,
       status: true,
       applicationMessage: true,
       reviewReason: true,
@@ -348,6 +431,6 @@ export async function listUsers(input: {
   const items = hasMore ? users.slice(0, input.limit) : users;
   return {
     items,
-    nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+    nextCursor: hasMore ? (items[items.length - 1]?.id ?? null) : null,
   };
 }

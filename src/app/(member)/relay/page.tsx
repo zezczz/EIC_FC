@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/brand/page-header";
 import { formatDateTime } from "@/lib/format";
 import { getSessionUser } from "@/server/auth/session";
 import { listMemberRelays } from "@/server/relays/service";
@@ -13,10 +14,12 @@ export default async function RelayPage() {
   const { items } = await listMemberRelays({ limit: 50, userId: user.id });
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black">活动接龙</h1>
-        <p className="text-muted-foreground mt-2">报名参加球队训练、比赛与聚会。</p>
-      </div>
+      <PageHeader
+        className="mb-8"
+        eyebrow="Sign Up"
+        title="活动接龙"
+        description="报名参加球队训练、比赛与聚会。"
+      />
       {items.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center">

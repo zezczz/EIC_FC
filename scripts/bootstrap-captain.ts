@@ -47,7 +47,10 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-async function promptHidden(rl: ReturnType<typeof createInterface>, question: string): Promise<string> {
+async function promptHidden(
+  rl: ReturnType<typeof createInterface>,
+  question: string,
+): Promise<string> {
   // 简化：Windows 无回显交互依赖 readline 输出即可；密码以 * 回显替代（脚本仅本地运行）
   const answer = await rl.question(question);
   return answer.trim();
@@ -72,7 +75,9 @@ async function main() {
   const password = process.env.CAPTAIN_PASSWORD ?? "";
 
   const needInteractive = !(username && email && displayName && password);
-  const rl = needInteractive ? createInterface({ input: process.stdin, output: process.stdout }) : null;
+  const rl = needInteractive
+    ? createInterface({ input: process.stdin, output: process.stdout })
+    : null;
 
   const finalUsername = username || (rl ? await promptHidden(rl, "队长用户名: ") : "");
   const finalEmail = email || (rl ? await promptHidden(rl, "队长邮箱: ") : "");
@@ -85,7 +90,11 @@ async function main() {
   if (finalPassword.length < 10 || finalPassword.length > 128) {
     fail("密码长度必须为 10-128 位");
   }
-  if (!/^[\p{L}\p{N}_]+$/u.test(finalUsername) || finalUsername.length < 3 || finalUsername.length > 32) {
+  if (
+    !/^[\p{L}\p{N}_]+$/u.test(finalUsername) ||
+    finalUsername.length < 3 ||
+    finalUsername.length > 32
+  ) {
     fail("用户名只能包含字母、数字、下划线或中文，3-32 位");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(finalEmail)) {

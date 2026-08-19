@@ -155,10 +155,7 @@ export async function revokeAllSessions(userId: string): Promise<void> {
 }
 
 /** 撤销除指定原始 token 外的全部会话 */
-export async function revokeOtherSessions(
-  userId: string,
-  keepRawToken: string,
-): Promise<void> {
+export async function revokeOtherSessions(userId: string, keepRawToken: string): Promise<void> {
   const keepHash = hashSessionToken(keepRawToken);
   await db.session.deleteMany({
     where: { userId, sessionToken: { not: keepHash } },

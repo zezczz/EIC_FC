@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { resolveArticleCoverUrl } from "@/lib/external-image";
+import { SiteCrest } from "@/components/brand/site-crest";
 
 export type ArticleCardData = {
   id: string;
@@ -23,7 +24,7 @@ export function ArticleCard({ article, rank }: { article: ArticleCardData; rank?
 
   return (
     <Link href={`/news/${article.slug}`} className="group block h-full">
-      <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="hover:ring-primary/20 h-full overflow-hidden transition-shadow hover:shadow-md">
         <div className="bg-muted aspect-[16/10] w-full overflow-hidden">
           {coverSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -35,8 +36,8 @@ export function ArticleCard({ article, rank }: { article: ArticleCardData; rank?
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="text-muted-foreground/30 flex h-full items-center justify-center text-3xl font-black">
-              EIC
+            <div className="flex h-full items-center justify-center">
+              <SiteCrest variant="shield" className="h-14 opacity-40" decorative />
             </div>
           )}
         </div>

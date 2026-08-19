@@ -6,19 +6,11 @@ import { routeUuidParam } from "@/schemas/common";
 export const uuidParamSchema = routeUuidParam;
 
 export const rejectUserSchema = z.object({
-  reason: z
-    .string()
-    .trim()
-    .min(1, "拒绝原因不能为空")
-    .max(500, "拒绝原因最多 500 字"),
+  reason: z.string().trim().min(1, "拒绝原因不能为空").max(500, "拒绝原因最多 500 字"),
 });
 
 export const suspendUserSchema = z.object({
-  reason: z
-    .string()
-    .trim()
-    .min(1, "停用原因不能为空")
-    .max(500, "停用原因最多 500 字"),
+  reason: z.string().trim().min(1, "停用原因不能为空").max(500, "停用原因最多 500 字"),
 });
 
 export const restoreUserSchema = z.object({
@@ -28,13 +20,18 @@ export const restoreUserSchema = z.object({
 export const changeRoleSchema = z.object({
   role: z.enum(["MEMBER", "STAFF", "CAPTAIN"]),
   staffTitle: z.enum(["COACH", "VICE_CAPTAIN", "MANAGER"]).nullable().optional(),
+  teamTitle: z.string().trim().max(50).nullable().optional(),
   permissions: z.array(z.string()).optional(),
+  profilePermissions: z.array(z.string()).optional(),
   reason: z.string().trim().max(500).optional(),
 });
 
 export const updateStaffPermissionsSchema = z.object({
+  role: z.enum(["MEMBER", "STAFF"]).optional(),
   staffTitle: z.enum(["COACH", "VICE_CAPTAIN", "MANAGER"]).nullable().optional(),
-  permissions: z.array(z.string()).min(1, "至少选择一项权限"),
+  teamTitle: z.string().trim().max(50).nullable().optional(),
+  permissions: z.array(z.string()),
+  profilePermissions: z.array(z.string()).optional(),
   reason: z.string().trim().max(500).optional(),
 });
 

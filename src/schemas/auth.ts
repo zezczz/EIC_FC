@@ -19,10 +19,7 @@ export const emailSchema = z
   .email("邮箱格式不正确")
   .max(254, "邮箱过长");
 
-export const passwordSchema = z
-  .string()
-  .min(10, "密码至少 10 位")
-  .max(128, "密码最多 128 位");
+export const passwordSchema = z.string().min(10, "密码至少 10 位").max(128, "密码最多 128 位");
 
 export const displayNameSchema = z
   .string()

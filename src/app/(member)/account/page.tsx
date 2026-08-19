@@ -1,9 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccountForm } from "@/components/account/account-form";
+import { PageHeader } from "@/components/brand/page-header";
 import { getSessionUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { formatDateTime } from "@/lib/format";
+import { FIELD_POSITION_LABELS, PREFERRED_FOOT_LABELS } from "@/lib/field-positions";
+import { STAFF_TITLE_LABELS } from "@/server/auth/permissions";
 
 export const metadata = { title: "我的资料", robots: { index: false } };
 
@@ -18,6 +21,11 @@ export default async function AccountPage() {
       email: true,
       role: true,
       staffTitle: true,
+      teamTitle: true,
+      signature: true,
+      studentId: true,
+      fieldPositions: true,
+      preferredFoot: true,
       status: true,
       createdAt: true,
       lastLoginAt: true,
@@ -32,14 +40,17 @@ export default async function AccountPage() {
       : null;
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10">
-      <h1 className="mb-6 text-3xl font-black">我的资料</h1>
+      <PageHeader className="mb-6" eyebrow="Profile" title="我的资料" />
       <Card>
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2">
             {user.displayName}
             <Badge>{user.status}</Badge>
             <Badge variant="outline">{user.role}</Badge>
-            {user.staffTitle && <Badge variant="secondary">{user.staffTitle}</Badge>}
+            {user.teamTitle && <Badge variant="secondary">{user.teamTitle}</Badge>}
+            {user.staffTitle && (
+              <Badge variant="secondary">{STAFF_TITLE_LABELS[user.staffTitle]}</Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -60,6 +71,25 @@ export default async function AccountPage() {
               <dt className="text-muted-foreground">最近登录</dt>
               <dd>{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "暂无记录"}</dd>
             </div>
+            {user.fieldPositions.length > 0 ? (
+              <div>
+                <dt className="text-muted-foreground">场上位置</dt>
+                <dd>
+                  {user.fieldPositions
+                    .map(
+                      (code) =>
+                        FIELD_POSITION_LABELS[code as keyof typeof FIELD_POSITION_LABELS] ?? code,
+                    )
+                    .join("、")}
+                </dd>
+              </div>
+            ) : null}
+            {user.preferredFoot ? (
+              <div>
+                <dt className="text-muted-foreground">惯用脚</dt>
+                <dd>{PREFERRED_FOOT_LABELS[user.preferredFoot]}</dd>
+              </div>
+            ) : null}
           </dl>
           <AccountForm
             initial={{
@@ -67,6 +97,10 @@ export default async function AccountPage() {
               avatarAssetId: user.avatarAssetId,
               avatarUrl,
               status: user.status,
+              signature: user.signature,
+              studentId: user.studentId,
+              fieldPositions: user.fieldPositions,
+              preferredFoot: user.preferredFoot,
             }}
           />
         </CardContent>

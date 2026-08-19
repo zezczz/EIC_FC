@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  FIELD_POSITION_LABELS,
+  FIELD_POSITIONS,
+  PREFERRED_FOOT_LABELS,
+} from "@/lib/field-positions";
+import type { ProfileField } from "@/server/users/profile-access";
 
 type ProfileFormProps = {
   initial: {
@@ -15,16 +21,44 @@ type ProfileFormProps = {
     avatarAssetId?: string | null;
     avatarUrl?: string | null;
     status: string;
+    signature?: string | null;
+    studentId?: string | null;
+    fieldPositions?: string[];
+    preferredFoot?: "LEFT" | "RIGHT" | "BOTH" | null;
   };
   allowApplicationMessage?: boolean;
+  editable?: Partial<Record<ProfileField, boolean>>;
+  savePath?: string;
+  showPassword?: boolean;
 };
 
-export function AccountForm({ initial, allowApplicationMessage = false }: ProfileFormProps) {
+const DEFAULT_EDITABLE: Partial<Record<ProfileField, boolean>> = {
+  displayName: true,
+  avatar: true,
+  signature: true,
+  studentId: true,
+  fieldPositions: true,
+  preferredFoot: true,
+};
+
+export function AccountForm({
+  initial,
+  allowApplicationMessage = false,
+  editable = DEFAULT_EDITABLE,
+  savePath = "/api/account/profile",
+  showPassword = true,
+}: ProfileFormProps) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(initial.displayName);
   const [applicationMessage, setApplicationMessage] = useState(initial.applicationMessage ?? "");
   const [avatarAssetId, setAvatarAssetId] = useState<string | null>(initial.avatarAssetId ?? null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initial.avatarUrl ?? null);
+  const [signature, setSignature] = useState(initial.signature ?? "");
+  const [studentId, setStudentId] = useState(initial.studentId ?? "");
+  const [fieldPositions, setFieldPositions] = useState<string[]>(initial.fieldPositions ?? []);
+  const [preferredFoot, setPreferredFoot] = useState<"LEFT" | "RIGHT" | "BOTH" | "">(
+    initial.preferredFoot ?? "",
+  );
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -64,14 +98,18 @@ export function AccountForm({ initial, allowApplicationMessage = false }: Profil
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await fetch("/api/account/profile", {
+      const payload: Record<string, unknown> = {};
+      if (editable.displayName) payload.displayName = displayName;
+      if (allowApplicationMessage) payload.applicationMessage = applicationMessage;
+      if (editable.avatar) payload.avatarAssetId = avatarAssetId;
+      if (editable.signature) payload.signature = signature || null;
+      if (editable.studentId) payload.studentId = studentId || null;
+      if (editable.fieldPositions) payload.fieldPositions = fieldPositions;
+      if (editable.preferredFoot) payload.preferredFoot = preferredFoot || null;
+      const res = await fetch(savePath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayName,
-          applicationMessage: allowApplicationMessage ? applicationMessage : undefined,
-          avatarAssetId,
-        }),
+        body: JSON.stringify(payload),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message || "保存失败");
@@ -106,6 +144,12 @@ export function AccountForm({ initial, allowApplicationMessage = false }: Profil
     }
   }
 
+  function togglePosition(code: string) {
+    setFieldPositions((current) =>
+      current.includes(code) ? current.filter((item) => item !== code) : [...current, code],
+    );
+  }
+
   return (
     <div className="space-y-8">
       <form onSubmit={saveProfile} className="space-y-4">
@@ -118,26 +162,95 @@ export function AccountForm({ initial, allowApplicationMessage = false }: Profil
               displayName.slice(0, 1)
             )}
           </div>
-          <div>
-            <Label htmlFor="avatar">头像</Label>
+          {editable.avatar ? (
+            <div>
+              <Label htmlFor="avatar">头像</Label>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  void uploadAvatar(file).catch((error) =>
+                    toast.error(error instanceof Error ? error.message : "上传失败"),
+                  );
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+        {editable.displayName ? (
+          <div className="space-y-2">
+            <Label htmlFor="displayName">昵称</Label>
             <Input
-              id="avatar"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                void uploadAvatar(file).catch((error) =>
-                  toast.error(error instanceof Error ? error.message : "上传失败"),
-                );
-              }}
+              id="displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
             />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="displayName">昵称</Label>
-          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-        </div>
+        ) : null}
+        {editable.signature ? (
+          <div className="space-y-2">
+            <Label htmlFor="signature">个性签名</Label>
+            <Textarea
+              id="signature"
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              maxLength={200}
+              rows={2}
+            />
+          </div>
+        ) : null}
+        {editable.studentId ? (
+          <div className="space-y-2">
+            <Label htmlFor="studentId">学号</Label>
+            <Input
+              id="studentId"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              maxLength={32}
+            />
+          </div>
+        ) : null}
+        {editable.fieldPositions ? (
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">场上位置（可多选）</legend>
+            <div className="flex flex-wrap gap-2">
+              {FIELD_POSITIONS.map((code) => (
+                <label
+                  key={code}
+                  className="border-input bg-background flex items-center gap-2 rounded-md border px-2 py-1 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={fieldPositions.includes(code)}
+                    onChange={() => togglePosition(code)}
+                  />
+                  {FIELD_POSITION_LABELS[code]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
+        {editable.preferredFoot ? (
+          <div className="space-y-2">
+            <Label htmlFor="preferredFoot">惯用脚</Label>
+            <select
+              id="preferredFoot"
+              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+              value={preferredFoot}
+              onChange={(e) => setPreferredFoot(e.target.value as "LEFT" | "RIGHT" | "BOTH" | "")}
+            >
+              <option value="">未填写</option>
+              {Object.entries(PREFERRED_FOOT_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         {allowApplicationMessage && (
           <div className="space-y-2">
             <Label htmlFor="applicationMessage">申请留言</Label>
@@ -154,7 +267,7 @@ export function AccountForm({ initial, allowApplicationMessage = false }: Profil
         </Button>
       </form>
 
-      {initial.status === "ACTIVE" && (
+      {showPassword && initial.status === "ACTIVE" && (
         <form onSubmit={savePassword} className="space-y-4 border-t pt-6">
           <h2 className="text-lg font-semibold">修改密码</h2>
           <div className="space-y-2">

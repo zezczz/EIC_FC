@@ -13,8 +13,11 @@ export const PATCH = handle(async (request: NextRequest, { requestId, params }) 
     uuidParamSchema.parse(params.id),
     actor.id,
     {
+      role: input.role,
       staffTitle: input.staffTitle ?? null,
+      teamTitle: input.teamTitle,
       permissions: input.permissions as import("@/server/auth/permissions").Permission[],
+      profilePermissions: input.profilePermissions,
     },
     {
       actorId: actor.id,

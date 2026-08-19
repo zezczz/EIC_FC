@@ -1,16 +1,8 @@
 import { db } from "@/server/db";
 import { errConflict, errUnauthorized, AppError } from "@/server/errors";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
-import {
-  createSession,
-  destroySession,
-  getSessionUser,
-} from "@/server/auth/session";
-import {
-  isLoginBlocked,
-  isRegisterBlocked,
-  recordAuthAttempt,
-} from "@/server/rate-limit";
+import { createSession, destroySession, getSessionUser } from "@/server/auth/session";
+import { isLoginBlocked, isRegisterBlocked, recordAuthAttempt } from "@/server/rate-limit";
 import { writeAudit } from "@/server/audit";
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
 
@@ -36,12 +28,7 @@ export async function registerUser(input: RegisterInput, ip: string) {
 
   const existing = await db.user.findFirst({
     where: {
-      OR: [
-        { usernameNormalized },
-        { emailNormalized },
-        { username },
-        { email },
-      ],
+      OR: [{ usernameNormalized }, { emailNormalized }, { username }, { email }],
     },
     select: { usernameNormalized: true, emailNormalized: true },
   });
@@ -107,10 +94,7 @@ export async function loginUser(input: LoginInput, ip: string) {
   // 用户不存在时仍做 dummy verify，缓解计时侧信道
   const dummyHash =
     "$argon2id$v=19$m=19456,t=2,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-  const passwordOk = await verifyPassword(
-    input.password,
-    user?.passwordHash ?? dummyHash,
-  );
+  const passwordOk = await verifyPassword(input.password, user?.passwordHash ?? dummyHash);
 
   if (!user || !passwordOk) {
     await recordAuthAttempt({ kind: "LOGIN", identity, ip, succeeded: false });

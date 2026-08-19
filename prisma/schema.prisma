@@ -21,11 +21,17 @@ model User {
   emailNormalized    String       @unique @db.VarChar(254)
   passwordHash       String
   displayName        String       @db.VarChar(50)
+  teamTitle          String?      @db.VarChar(50)
+  signature          String?      @db.VarChar(200)
+  studentId          String?      @db.VarChar(32)
+  fieldPositions     String[]     @default([])
+  preferredFoot      PreferredFoot?
   avatarAssetId      String?      @unique @db.Uuid
   avatarAsset        MediaAsset?  @relation("AvatarOf", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   role               Role         @default(MEMBER)
   staffTitle         StaffTitle?
   permissions        String[]     @default([])
+  profilePermissions String[]     @default([])
   status             UserStatus   @default(PENDING)
   applicationMessage String?      @db.VarChar(500)
   reviewReason       String?      @db.VarChar(500)
@@ -48,6 +54,7 @@ model User {
   relayEntries       RelayEntry[]
   uploadedMedia      MediaAsset[] @relation("MediaUploader")
   auditLogs          AuditLog[]
+  updatedTeamProfiles TeamProfile[] @relation("TeamProfileEditor")
 
   @@index([status])
   @@index([emailNormalized])
@@ -141,8 +148,10 @@ model MediaAsset {
   createdAt    DateTime        @default(now()) @db.Timestamptz
   deletedAt    DateTime?       @db.Timestamptz
 
-  avatarUser   User?           @relation("AvatarOf")
+  avatarUser    User?          @relation("AvatarOf")
   articleCovers Article[]      @relation("ArticleCover")
+  teamCrest     TeamProfile?   @relation("TeamCrest")
+  teamGallery   TeamImage[]    @relation("TeamGallery")
 
   @@index([uploadedById])
   @@index([status])
@@ -266,6 +275,48 @@ enum MediaPurpose {
   ARTICLE_COVER
   ARTICLE_CONTENT
   AVATAR
+  TEAM_CREST
+  TEAM_GALLERY
+}
+
+enum PreferredFoot {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+// ---------- 球队资料（单例） ----------
+
+model TeamProfile {
+  id           String      @id
+  name         String      @db.VarChar(80)
+  subtitle     String?     @db.VarChar(80)
+  contact      String?     @db.VarChar(300)
+  honors       String      @default("") @db.VarChar(2000)
+  summary      String      @default("") @db.VarChar(500)
+  contentJson  Json
+  plainText    String      @default("")
+  crestAssetId String?     @unique @db.Uuid
+  crestAsset   MediaAsset? @relation("TeamCrest", fields: [crestAssetId], references: [id], onDelete: SetNull)
+  version      Int         @default(1)
+  updatedById  String?     @db.Uuid
+  updatedBy    User?       @relation("TeamProfileEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now()) @db.Timestamptz
+  updatedAt    DateTime    @updatedAt @db.Timestamptz
+  images       TeamImage[]
+}
+
+model TeamImage {
+  id            String      @id @default(uuid()) @db.Uuid
+  teamProfileId String
+  teamProfile   TeamProfile @relation(fields: [teamProfileId], references: [id], onDelete: Cascade)
+  assetId       String      @unique @db.Uuid
+  asset         MediaAsset  @relation("TeamGallery", fields: [assetId], references: [id], onDelete: Restrict)
+  caption       String?     @db.VarChar(120)
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now()) @db.Timestamptz
+
+  @@index([teamProfileId, sortOrder])
 }
 
 enum RelayStatus {

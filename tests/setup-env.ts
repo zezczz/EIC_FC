@@ -20,8 +20,7 @@ if (!process.env.NODE_ENV) {
 process.env.APP_URL ||= "http://localhost:3000";
 process.env.AUTH_SECRET ||= "test-auth-secret-32chars-minimum!!";
 process.env.TRUSTED_ORIGINS ||= "http://localhost:3000";
-process.env.DATABASE_URL ||=
-  "postgresql://eicfc:eicfc_dev_password@localhost:5432/eicfc_test";
+process.env.DATABASE_URL ||= "postgresql://eicfc:eicfc_dev_password@localhost:5432/eicfc_test";
 process.env.DIRECT_URL ||= process.env.DATABASE_URL;
 process.env.S3_ENDPOINT ||= "http://localhost:9000";
 process.env.S3_REGION ||= "us-east-1";

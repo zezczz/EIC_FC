@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import { profileUpdateSchema, passwordChangeSchema } from "@/schemas/account";
 
 describe("account schema", () => {
-  it("accepts profile update", () => {
-    const parsed = profileUpdateSchema.parse({ displayName: "新昵称" });
-    expect(parsed.displayName).toBe("新昵称");
+  it("accepts extra profile fields", () => {
+    const parsed = profileUpdateSchema.parse({
+      signature: "永不独行",
+      studentId: "U202012345",
+      fieldPositions: ["ST", "CF"],
+      preferredFoot: "RIGHT",
+    });
+    expect(parsed.fieldPositions).toEqual(["ST", "CF"]);
   });
 
   it("rejects mismatched passwords", () => {

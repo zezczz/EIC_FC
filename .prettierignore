@@ -1,4 +1,7 @@
 .agents/
+.claude/
+.windsurf/
+.cursor/
 .next/
 node_modules/
 src/generated/

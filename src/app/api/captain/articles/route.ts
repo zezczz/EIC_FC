@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { articleCreateSchema, articleListQuerySchema } from "@/schemas/articles";
-import { requirePermission } from "@/server/auth/guards";
+import { requireAnyPermission, requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
 import { createArticle, listCaptainArticles, type ArticleContext } from "@/server/articles/service";
 import { getClientIp, handle, parseJsonBody, requireSameOrigin } from "@/server/http";
@@ -15,7 +15,11 @@ function context(request: NextRequest, requestId: string, actorId: string): Arti
 }
 
 export const GET = handle(async (request: NextRequest, { requestId }) => {
-  await requirePermission(PERMISSIONS.ARTICLES_WRITE);
+  await requireAnyPermission(
+    PERMISSIONS.ARTICLES_READ,
+    PERMISSIONS.ARTICLES_WRITE,
+    PERMISSIONS.ARTICLES_PUBLISH,
+  );
   const query = articleListQuerySchema.parse({
     cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
     limit: request.nextUrl.searchParams.get("limit") ?? undefined,

@@ -132,10 +132,7 @@ type ResolvedRouteParams = Record<string, string | string[]>;
 type RouteParams = { params: Promise<ResolvedRouteParams> | ResolvedRouteParams };
 
 /** 读取动态路由单个字符串参数 */
-export function getRouteParam(
-  params: Record<string, string | string[]>,
-  key: string,
-): string {
+export function getRouteParam(params: Record<string, string | string[]>, key: string): string {
   const value = params[key];
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";

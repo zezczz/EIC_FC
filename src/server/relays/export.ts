@@ -2,20 +2,7 @@ import ExcelJS from "exceljs";
 import { db } from "@/server/db";
 import { errNotFound } from "@/server/errors";
 import { formatDateTime } from "@/lib/format";
-
-const RESPONSE_LABELS = {
-  JOINED: "参加",
-  WAITLISTED: "候补",
-  DECLINED: "无法参加",
-} as const;
-
-const STATUS_LABELS = {
-  DRAFT: "草稿",
-  OPEN: "开放",
-  CLOSED: "已关闭",
-  CANCELLED: "已取消",
-  FINISHED: "已完成",
-} as const;
+import { RELAY_RESPONSE_LABELS, RELAY_STATUS_LABELS } from "@/lib/relay-labels";
 
 type EntryWithUser = {
   id: string;
@@ -89,6 +76,21 @@ function expandParticipantRows(
   return rows;
 }
 
+function formatParticipantNames(
+  entries: EntryWithUser[],
+  response: "JOINED" | "WAITLISTED",
+): string {
+  const names = expandParticipantRows(entries, response).map((row) => row.participantName);
+  return names.length > 0 ? names.join("、") : "无";
+}
+
+function formatDeclinedNames(entries: EntryWithUser[]): string {
+  const names = entries
+    .filter((entry) => entry.response === "DECLINED")
+    .map((entry) => entry.user.displayName);
+  return names.length > 0 ? names.join("、") : "无";
+}
+
 export async function buildRelayExportWorkbook(relayId: string) {
   const relay = await db.relay.findFirst({
     where: { id: relayId, deletedAt: null },
@@ -106,7 +108,14 @@ export async function buildRelayExportWorkbook(relayId: string) {
   const joinedCount = relay.entries
     .filter((entry) => entry.response === "JOINED")
     .reduce((sum, entry) => sum + entry.participantCount, 0);
-  const waitlistCount = relay.entries.filter((entry) => entry.response === "WAITLISTED").length;
+  const waitlistCount = relay.entries
+    .filter((entry) => entry.response === "WAITLISTED")
+    .reduce((sum, entry) => sum + entry.participantCount, 0);
+  const declinedCount = relay.entries
+    .filter((entry) => entry.response === "DECLINED")
+    .reduce((sum, entry) => sum + entry.participantCount, 0);
+  const joinedParticipantNames = formatParticipantNames(relay.entries, "JOINED");
+  const declinedParticipantNames = formatDeclinedNames(relay.entries);
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "EIC FC";
@@ -124,23 +133,40 @@ export async function buildRelayExportWorkbook(relayId: string) {
     { field: "地点", value: relay.location },
     { field: "报名截止", value: formatDateTime(relay.signupDeadline) },
     { field: "人数上限", value: relay.capacity ?? "不限" },
-    { field: "状态", value: STATUS_LABELS[relay.status] },
+    { field: "状态", value: RELAY_STATUS_LABELS[relay.status] },
     { field: "正式人数", value: joinedCount },
     { field: "候补人数", value: waitlistCount },
+    { field: "无法参加人数", value: declinedCount },
+    { field: "正式参加人员", value: joinedParticipantNames },
+    { field: "无法参加人员", value: declinedParticipantNames },
     { field: "导出时间", value: formatDateTime(new Date()) },
   ]);
   styleHeaderRow(infoSheet.getRow(1));
 
-  addParticipantSheet(
-    workbook,
-    "正式参加名单",
-    expandParticipantRows(relay.entries, "JOINED"),
-  );
-  addParticipantSheet(
-    workbook,
-    "候补名单",
-    expandParticipantRows(relay.entries, "WAITLISTED"),
-  );
+  infoSheet.addRow([]);
+  infoSheet.addRow(["报名明细"]);
+  const rosterHeader = infoSheet.addRow(["姓名", "状态", "备注"]);
+  styleHeaderRow(rosterHeader);
+  infoSheet.getColumn(3).width = 28;
+
+  const rosterOrder: Array<"JOINED" | "WAITLISTED" | "DECLINED"> = [
+    "JOINED",
+    "WAITLISTED",
+    "DECLINED",
+  ];
+  for (const response of rosterOrder) {
+    for (const entry of relay.entries.filter((item) => item.response === response)) {
+      const row = infoSheet.addRow([
+        entry.user.displayName,
+        rosterStatus(response),
+        entry.note?.trim() ?? "",
+      ]);
+      row.font = { name: "Arial", size: 11, color: { argb: rosterColor(response) } };
+    }
+  }
+
+  addParticipantSheet(workbook, "正式参加名单", expandParticipantRows(relay.entries, "JOINED"));
+  addParticipantSheet(workbook, "候补名单", expandParticipantRows(relay.entries, "WAITLISTED"));
 
   const detailSheet = workbook.addWorksheet("报名明细");
   detailSheet.columns = [
@@ -161,7 +187,7 @@ export async function buildRelayExportWorkbook(relayId: string) {
       displayName: entry.user.displayName,
       username: entry.user.username,
       email: entry.user.email,
-      response: RESPONSE_LABELS[entry.response],
+      response: RELAY_RESPONSE_LABELS[entry.response],
       participantCount: entry.participantCount,
       companions:
         entry.companionNames.length > 0
@@ -184,7 +210,8 @@ export async function buildRelayExportWorkbook(relayId: string) {
   for (const sheet of workbook.worksheets) {
     sheet.eachRow((row) => {
       row.eachCell((cell) => {
-        cell.font = { name: "Arial", size: 11 };
+        const existing = cell.font ?? {};
+        cell.font = { ...existing, name: "Arial", size: existing.size ?? 11 };
       });
     });
   }
@@ -195,11 +222,19 @@ export async function buildRelayExportWorkbook(relayId: string) {
   return { buffer, filename };
 }
 
-function addParticipantSheet(
-  workbook: ExcelJS.Workbook,
-  title: string,
-  rows: ParticipantRow[],
-) {
+function rosterStatus(response: "JOINED" | "WAITLISTED" | "DECLINED"): string {
+  if (response === "JOINED") return "join";
+  if (response === "WAITLISTED") return "waitlisted";
+  return "declined";
+}
+
+function rosterColor(response: "JOINED" | "WAITLISTED" | "DECLINED"): string {
+  if (response === "JOINED") return "FF15803D";
+  if (response === "WAITLISTED") return "FFC2410C";
+  return "FFB91C1C";
+}
+
+function addParticipantSheet(workbook: ExcelJS.Workbook, title: string, rows: ParticipantRow[]) {
   const sheet = workbook.addWorksheet(title);
   sheet.columns = [
     { header: "序号", key: "index", width: 8 },

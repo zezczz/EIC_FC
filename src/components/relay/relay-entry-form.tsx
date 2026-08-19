@@ -24,9 +24,7 @@ export function RelayEntryForm({
 }) {
   const router = useRouter();
   const [participantCount, setParticipantCount] = useState(initial?.participantCount ?? 1);
-  const [companionNames, setCompanionNames] = useState<string[]>(
-    initial?.companionNames ?? [],
-  );
+  const [companionNames, setCompanionNames] = useState<string[]>(initial?.companionNames ?? []);
   const [note, setNote] = useState(initial?.note ?? "");
   const [busy, setBusy] = useState(false);
 
@@ -105,9 +103,7 @@ export function RelayEntryForm({
                 value={name}
                 onChange={(e) =>
                   setCompanionNames((current) =>
-                    current.map((item, itemIndex) =>
-                      itemIndex === index ? e.target.value : item,
-                    ),
+                    current.map((item, itemIndex) => (itemIndex === index ? e.target.value : item)),
                   )
                 }
                 maxLength={50}

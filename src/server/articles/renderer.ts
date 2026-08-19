@@ -1,5 +1,6 @@
 import { articleContentSchema, type TiptapNode } from "@/schemas/articles";
 import { isAllowedArticleImageSrc } from "@/lib/external-image";
+import { isTextColorToken } from "@/lib/text-colors";
 import { AppError } from "@/server/errors";
 
 function escapeHtml(value: string): string {
@@ -28,6 +29,13 @@ function renderMarks(text: string, node: TiptapNode): string {
     if (mark.type === "link") {
       const href = safeHref(mark.attrs?.href);
       return href ? `<a href="${escapeHtml(href)}" rel="noopener noreferrer">${html}</a>` : html;
+    }
+    if (mark.type === "textColor") {
+      const color = mark.attrs?.color;
+      if (isTextColorToken(color)) {
+        return `<span class="text-color-${color}">${html}</span>`;
+      }
+      return html;
     }
     return html;
   }, text);
@@ -73,10 +81,9 @@ function renderNode(node: TiptapNode, depth: number): string {
       if (!isAllowedArticleImageSrc(src) || !alt) {
         throw new AppError("VALIDATION_ERROR", "正文图片必须使用 https:// 图床链接并填写替代文本");
       }
-      const extraAttrs =
-        src.startsWith("https://")
-          ? ' loading="lazy" referrerpolicy="no-referrer"'
-          : ' loading="lazy"';
+      const extraAttrs = src.startsWith("https://")
+        ? ' loading="lazy" referrerpolicy="no-referrer"'
+        : ' loading="lazy"';
       return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${
         title ? ` title="${escapeHtml(title)}"` : ""
       }${extraAttrs}>`;

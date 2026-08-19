@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  handle,
-  parseJsonBody,
-  requireSameOrigin,
-  getClientIp,
-} from "@/server/http";
+import { handle, parseJsonBody, requireSameOrigin, getClientIp } from "@/server/http";
 import { requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
 import { changeRoleSchema, uuidParamSchema } from "@/schemas/users";
@@ -26,7 +21,9 @@ export const POST = handle(async (request: NextRequest, { requestId, params }) =
   };
   const result = await changeUserRole(id, captain.id, input.role, ctx, {
     staffTitle: input.staffTitle ?? null,
+    teamTitle: input.teamTitle,
     permissions: input.permissions as import("@/server/auth/permissions").Permission[] | undefined,
+    profilePermissions: input.profilePermissions,
   });
   return NextResponse.json({ data: result, requestId });
 });

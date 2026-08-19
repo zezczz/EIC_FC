@@ -86,34 +86,109 @@ function Open-Browser([string]$Url) {
   Start-Process $Url | Out-Null
 }
 
+function Test-DockerReady {
+  if (-not (Test-Command "docker")) {
+    return $false
+  }
+
+  $prevErrorAction = $ErrorActionPreference
+  $ErrorActionPreference = "SilentlyContinue"
+  try {
+    docker info *> $null
+    return $LASTEXITCODE -eq 0
+  } finally {
+    $ErrorActionPreference = $prevErrorAction
+  }
+}
+
+function Get-DockerDesktopPath {
+  if ($env:DOCKER_DESKTOP -and (Test-Path $env:DOCKER_DESKTOP)) {
+    return $env:DOCKER_DESKTOP
+  }
+
+  $candidates = @(
+    "E:\DockerProgram\Docker Desktop.exe",
+    (Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"),
+    (Join-Path ${env:ProgramFiles(x86)} "Docker\Docker\Docker Desktop.exe"),
+    (Join-Path $env:LOCALAPPDATA "Docker\Docker Desktop.exe")
+  )
+
+  foreach ($candidate in $candidates) {
+    if ($candidate -and (Test-Path $candidate)) {
+      return $candidate
+    }
+  }
+
+  return $null
+}
+
+function Start-DockerDesktopIfNeeded {
+  if (Test-DockerReady) {
+    return
+  }
+
+  $dockerDesktop = Get-DockerDesktopPath
+  if (-not $dockerDesktop) {
+    if (-not (Test-Command "docker")) {
+      throw @(
+        "Docker CLI was not found and Docker Desktop could not be located.",
+        "Install Docker Desktop, add docker to PATH, or set DOCKER_DESKTOP to the executable path."
+      ) -join " "
+    }
+
+    throw @(
+      "Docker CLI is available, but the Docker daemon is not running and Docker Desktop was not found.",
+      "Start Docker Desktop manually, or set DOCKER_DESKTOP to its executable path."
+    ) -join " "
+  }
+
+  Write-Host "Starting Docker Desktop..."
+  Start-Process -FilePath $dockerDesktop | Out-Null
+}
+
 function Wait-DockerReady([int]$TimeoutSec = 120) {
+  if (Test-DockerReady) {
+    return
+  }
+
+  Write-Host "Waiting for Docker to become ready..."
   $deadline = (Get-Date).AddSeconds($TimeoutSec)
   while ((Get-Date) -lt $deadline) {
-    docker info *> $null
-    if ($LASTEXITCODE -eq 0) {
+    if (Test-DockerReady) {
+      Write-Host "Docker is ready." -ForegroundColor Green
       return
     }
     Start-Sleep -Seconds 2
   }
-  throw "Docker did not become ready within ${TimeoutSec}s. Open Docker Desktop and retry."
+
+  throw @(
+    "Docker did not become ready within ${TimeoutSec}s.",
+    "Open Docker Desktop, wait until it finishes starting, then retry."
+  ) -join " "
 }
 
 function Wait-ComposeServices([int]$TimeoutSec = 120) {
   $services = @("postgres", "minio")
   $deadline = (Get-Date).AddSeconds($TimeoutSec)
-  while ((Get-Date) -lt $deadline) {
-    $allHealthy = $true
-    foreach ($svc in $services) {
-      $health = docker compose -f compose.dev.yml ps $svc --format "{{.Health}}" 2>$null
-      if ($health -ne "healthy") {
-        $allHealthy = $false
-        break
+  $prevErrorAction = $ErrorActionPreference
+  $ErrorActionPreference = "SilentlyContinue"
+  try {
+    while ((Get-Date) -lt $deadline) {
+      $allHealthy = $true
+      foreach ($svc in $services) {
+        $health = docker compose -f compose.dev.yml ps $svc --format "{{.Health}}" 2>$null
+        if ($health -ne "healthy") {
+          $allHealthy = $false
+          break
+        }
       }
+      if ($allHealthy) {
+        return
+      }
+      Start-Sleep -Seconds 2
     }
-    if ($allHealthy) {
-      return
-    }
-    Start-Sleep -Seconds 2
+  } finally {
+    $ErrorActionPreference = $prevErrorAction
   }
   throw "PostgreSQL and MinIO did not become healthy within ${TimeoutSec}s."
 }
@@ -193,32 +268,7 @@ Remove-StaleNextDevProcesses $RepoRoot
 
 if (-not $SkipDocker) {
   Write-Step "Starting Docker dependencies (PostgreSQL and MinIO)"
-  if (-not (Test-Command "docker")) {
-    $dockerDesktop = if ($env:DOCKER_DESKTOP) {
-      $env:DOCKER_DESKTOP
-    } else {
-      "E:\DockerProgram\Docker Desktop.exe"
-    }
-    if (Test-Path $dockerDesktop) {
-      Write-Host "Starting Docker Desktop..."
-      Start-Process -FilePath $dockerDesktop | Out-Null
-    } else {
-      throw "Docker CLI and Docker Desktop were not found: $dockerDesktop"
-    }
-  } else {
-    docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
-      $dockerDesktop = if ($env:DOCKER_DESKTOP) {
-        $env:DOCKER_DESKTOP
-      } else {
-        "E:\DockerProgram\Docker Desktop.exe"
-      }
-      if (Test-Path $dockerDesktop) {
-        Write-Host "Starting Docker Desktop..."
-        Start-Process -FilePath $dockerDesktop | Out-Null
-      }
-    }
-  }
+  Start-DockerDesktopIfNeeded
   Wait-DockerReady
   pnpm docker:dev:up
   if ($LASTEXITCODE -ne 0) {
@@ -238,7 +288,7 @@ if (-not $SkipMigrate) {
 
 Write-Step "Starting Next.js development server"
 Write-Host "URL: $BaseUrl" -ForegroundColor Green
-Write-Host "Test accounts: captain / TestCaptain123!  |  testmember01 / TestMember123!" -ForegroundColor DarkGray
+Write-Host "Seed captain (pnpm db:seed):  devcaptain / dev-captain-password" -ForegroundColor DarkGray
 Write-Host "Press Ctrl+C to stop." -ForegroundColor DarkGray
 
 $browserJob = Start-BrowserWhenReady -BaseUrl $BaseUrl

@@ -1,5 +1,18 @@
 const MAX_SLUG_LENGTH = 180;
 
+/** 公开路由/API 使用的 slug 归一化，与 slugifyTitle 写入规则对齐 */
+export function normalizeArticleSlug(raw: string): string {
+  let slug = raw.trim();
+  if (slug.includes("%")) {
+    try {
+      slug = decodeURIComponent(slug);
+    } catch {
+      // 保留原值，避免非法编码导致抛错
+    }
+  }
+  return slug.normalize("NFKC").trim().toLowerCase();
+}
+
 export function slugifyTitle(title: string): string {
   const normalized = title
     .normalize("NFKC")

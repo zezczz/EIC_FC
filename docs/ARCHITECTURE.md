@@ -225,7 +225,15 @@ emailNormalized     varchar(254) unique
 passwordHash        text
 displayName         varchar(50)
 avatarAssetId       UUID nullable FK MediaAsset
-role                MEMBER | CAPTAIN
+role                MEMBER | STAFF | CAPTAIN
+staffTitle          COACH | VICE_CAPTAIN | MANAGER nullable
+permissions         text[]
+teamTitle           varchar(50) nullable
+signature           varchar(200) nullable
+studentId           varchar(32) nullable
+fieldPositions      text[]
+preferredFoot       LEFT | RIGHT | BOTH nullable
+profilePermissions  text[]
 status              PENDING | ACTIVE | REJECTED | SUSPENDED
 applicationMessage  varchar(500) nullable
 reviewReason        varchar(500) nullable
@@ -243,7 +251,30 @@ deletedAt           timestamptz nullable
 - 邮箱保存原始展示值和小写规范化值；
 - 不保存明文密码；
 - 默认角色为 MEMBER、状态为 PENDING；
-- 头像只能引用 READY 状态的图片。
+- 头像只能引用 READY 状态的图片；
+- `permissions` 为空表示没有后台权限；队长始终拥有全部权限；
+- `teamTitle` 只用于展示，不参与授权；
+- `profilePermissions` 控制资料字段的查看/编辑，未配置时使用默认公开字段规则。
+
+### 7.1a TeamProfile
+
+单例球队资料，主键固定为 `default`。
+
+```text
+id            text PK
+name          varchar(80)
+subtitle      varchar(80) nullable
+contact       varchar(300) nullable
+honors        varchar(2000)
+summary       varchar(500)
+contentJson   jsonb
+plainText     text
+crestAssetId  UUID nullable FK MediaAsset
+version       integer
+updatedById   UUID nullable FK User
+```
+
+`TeamImage` 保存球队图集。仅队长可编辑；公开 `/team` 可读取。
 
 ### 7.2 会话表
 
@@ -257,6 +288,7 @@ expires      timestamptz index
 ```
 
 保留 `Account` / `VerificationToken` 表以兼容未来扩展，首期不使用。
+
 ### 7.3 Article
 
 ```text
@@ -1175,18 +1207,19 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 
 ## 26. 文件清单
 
-实现完成时至少包含：
+目录含义与生成物说明见 [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)。当前仓库至少包含：
 
 ```text
 .
 ├─ README.md
-├─ ARCHITECTURE.md
+├─ AGENTS.md                  # next dev 自动写入的 Next.js 16 规则
 ├─ package.json
 ├─ pnpm-lock.yaml
 ├─ next.config.ts
 ├─ tsconfig.json
-├─ tailwind.config.ts
-├─ components.json
+├─ postcss.config.mjs         # Tailwind CSS 4，无独立 tailwind.config.ts
+├─ components.json            # shadcn/ui；hooks 别名尚未对应 src/hooks/
+├─ prisma.config.ts
 ├─ .env.example
 ├─ .gitignore
 ├─ .dockerignore
@@ -1205,24 +1238,33 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 │  ├─ deploy.sh
 │  ├─ healthcheck.sh
 │  ├─ cleanup.ts
-│  └─ verify-backup.sh
+│  ├─ verify-backup.sh
+│  ├─ start-dev.ps1
+│  ├─ local-verify-flow.ts
+│  └─ cloudflare-tunnel-setup.ps1
 ├─ src/
 │  ├─ app/
 │  ├─ components/
 │  ├─ server/
 │  ├─ schemas/
-│  ├─ lib/
-│  └─ types/
+│  └─ lib/
 ├─ tests/
 │  ├─ unit/
 │  ├─ integration/
 │  └─ e2e/
 ├─ docs/
+│  ├─ ARCHITECTURE.md
+│  ├─ PROJECT_STRUCTURE.md
 │  ├─ API.md
 │  ├─ DEPLOYMENT.md
-│  └─ RUNBOOK.md
+│  ├─ RUNBOOK.md
+│  ├─ GO_LIVE.md
+│  ├─ deployment-home-server.md
+│  └─ BUGS.md
 └─ .github/workflows/ci.yml
 ```
+
+`src/generated/prisma`、`.next/`、`next-env.d.ts` 由命令生成，不提交。`.agents/`、`.claude/`、`.windsurf/` 是多 IDE Skills 副本，不是应用运行时依赖。
 
 ## 27. 实施顺序
 

@@ -8,6 +8,7 @@ test.describe("关键公开流程", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "EIC FC" })).toBeVisible();
     await expect(page.getByRole("link", { name: "球队动态" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "申请加入" })).toBeVisible();
   });
 
   test("注册页可打开", async ({ page }) => {

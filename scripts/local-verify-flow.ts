@@ -1,5 +1,8 @@
 /**
- * 本地新闻 + 接龙 API 验证脚本（仅开发环境手动执行）
+ * 本地新闻 + 接龙 API 验证脚本（仅开发环境手动执行）。
+ * 使用方式：`pnpm tsx scripts/local-verify-flow.ts`
+ * 账号需事先存在：默认 `captain` / `TestCaptain123!` 与 `testmember01` / `TestMember123!`。
+ * `pnpm db:seed` 创建的是 `devcaptain`，与本脚本默认账号不同。
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

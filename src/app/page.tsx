@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SiteHeader } from "@/components/site-header";
 import { db } from "@/server/db";
 import { ArticleCard } from "@/components/article/article-card";
+import { SiteCrest } from "@/components/brand/site-crest";
+import { getTeamProfile } from "@/server/team/service";
 
 /**
  * 首页（ARCHITECTURE.md §13）：球队视觉区、置顶动态和最新动态。
  */
 export default async function HomePage() {
-  const [pinned, latest] = await Promise.all([
+  const [pinned, latest, team] = await Promise.all([
     db.article.findMany({
       where: { status: "PUBLISHED", deletedAt: null, pinnedAt: { not: null } },
       orderBy: [{ pinOrder: "asc" }, { publishedAt: "desc" }],
@@ -26,86 +27,102 @@ export default async function HomePage() {
         coverAsset: { select: { storageKey: true, mimeType: true } },
       },
     }),
+    getTeamProfile(),
   ]);
 
   return (
-    <>
-      <SiteHeader />
-      <main className="flex-1">
-        {/* 球队视觉区 */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-emerald-900 to-emerald-950 text-white">
-          <div className="mx-auto max-w-5xl px-4 py-20 sm:py-28">
-            <p className="mb-3 text-sm font-medium text-emerald-300">业余足球队 · 快乐足球</p>
-            <h1 className="text-4xl font-black tracking-tight sm:text-6xl">EIC FC</h1>
-            <p className="mt-4 max-w-xl text-base text-emerald-100/90 sm:text-lg">
-              与队友并肩作战，记录每一场球赛。球队动态、活动接龙，都在这里。
+    <main className="flex-1">
+      <section className="bg-primary text-primary-foreground">
+        <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1fr_auto]">
+          <div className="order-2 lg:order-1">
+            <p className="mb-3 text-sm tracking-wide text-white/80">
+              {team.subtitle || "华科电信足球队"}
+            </p>
+            <h1 className="font-brand text-5xl font-extrabold tracking-wide sm:text-7xl">
+              {team.name}
+            </h1>
+            <p className="mt-4 max-w-xl text-base text-white/90 sm:text-lg">
+              {team.summary || "与队友并肩作战，记录每一场球赛。球队动态、活动接龙，都在这里。"}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button render={<Link href="/news" />} size="lg" className="bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
+              <Button
+                render={<Link href="/news" />}
+                size="lg"
+                className="text-primary bg-white hover:bg-white/90"
+              >
                 浏览球队动态
               </Button>
               <Button
                 render={<Link href="/register" />}
                 size="lg"
                 variant="outline"
-                className="border-emerald-400/40 text-white hover:bg-emerald-900 hover:text-white"
+                className="border-white/55 bg-transparent text-white hover:bg-white/10 hover:text-white focus-visible:border-white focus-visible:ring-white/40"
               >
                 申请加入
               </Button>
             </div>
           </div>
-        </section>
-
-        <div className="mx-auto max-w-5xl px-4 py-10">
-          {/* 置顶动态 */}
-          {pinned.length > 0 && (
-            <section className="mb-10">
-              <h2 className="mb-4 text-xl font-bold">置顶动态</h2>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {pinned.map((article, i) => (
-                  <ArticleCard key={article.id} article={article} rank={i + 1} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* 最新动态 */}
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">最新动态</h2>
-              <Button render={<Link href="/news" />} variant="ghost" size="sm">
-                查看全部 →
-              </Button>
-            </div>
-            {latest.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {latest.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
-                ))}
-              </div>
+          <div className="order-1 mx-auto lg:order-2">
+            {team.crestUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={team.crestUrl}
+                alt={`${team.name} 队徽`}
+                className="h-40 drop-shadow-xl sm:h-52 lg:h-60"
+              />
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  还没有发布球队动态，敬请期待。
-                </CardContent>
-              </Card>
+              <SiteCrest className="h-40 drop-shadow-xl sm:h-52 lg:h-60" decorative />
             )}
-          </section>
+          </div>
         </div>
-      </main>
+      </section>
 
-      {/* 备案信息位置（ARCHITECTURE.md §14） */}
-      <footer className="border-t py-8">
-        <div className="mx-auto max-w-5xl px-4 text-center text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} EIC FC</p>
-          <p className="mt-1">
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer" className="hover:underline">
-              备案号：ICP备案号待填写
-            </a>
-          </p>
-          <p className="mt-1">公安联网备案号待填写</p>
-        </div>
-      </footer>
-    </>
+      <div className="mx-auto max-w-5xl px-4 py-10">
+        {pinned.length > 0 && (
+          <section className="mb-10">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="font-brand text-primary text-[0.7rem] tracking-[0.28em] uppercase">
+                  Pinned
+                </p>
+                <h2 className="text-xl font-bold">置顶动态</h2>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {pinned.map((article, i) => (
+                <ArticleCard key={article.id} article={article} rank={i + 1} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="font-brand text-primary text-[0.7rem] tracking-[0.28em] uppercase">
+                Latest
+              </p>
+              <h2 className="text-xl font-bold">最新动态</h2>
+            </div>
+            <Button render={<Link href="/news" />} variant="ghost" size="sm">
+              查看全部 →
+            </Button>
+          </div>
+          {latest.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {latest.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-muted-foreground py-12 text-center">
+                还没有发布球队动态，敬请期待。
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }

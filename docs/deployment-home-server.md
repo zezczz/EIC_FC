@@ -17,3 +17,5 @@
 3. DDNS + 端口映射（最后选择）
 
 注意：家宽可能 CGNAT、封端口、低上行；Tunnel 不等于 ICP 备案，大陆访问质量需实测。
+
+Windows 上配置 Cloudflare Tunnel 可用 [`scripts/cloudflare-tunnel-setup.ps1`](../scripts/cloudflare-tunnel-setup.ps1)。

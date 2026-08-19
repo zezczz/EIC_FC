@@ -93,4 +93,44 @@ describe("tiptap renderer", () => {
       }),
     ).toThrow();
   });
+
+  it("只渲染预设文字颜色 class", () => {
+    const html = renderArticleContent({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "红",
+              marks: [{ type: "textColor", attrs: { color: "red" } }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(html).toContain('class="text-color-red"');
+    expect(html).not.toContain("style=");
+  });
+
+  it("忽略非白名单颜色", () => {
+    expect(() =>
+      renderArticleContent({
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "x",
+                marks: [{ type: "textColor", attrs: { color: "magenta" } }],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
 });

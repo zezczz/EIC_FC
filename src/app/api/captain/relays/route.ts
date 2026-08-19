@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { relayCreateSchema, relayListQuerySchema } from "@/schemas/relays";
-import { requirePermission } from "@/server/auth/guards";
+import { requireAnyPermission, requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
 import { handle, parseJsonBody, requireSameOrigin } from "@/server/http";
 import { relayRequestContext } from "@/server/relays/route-context";
 import { createRelay, listCaptainRelays } from "@/server/relays/service";
 
 export const GET = handle(async (request: NextRequest, { requestId }) => {
-  await requirePermission(PERMISSIONS.RELAYS_WRITE);
+  await requireAnyPermission(PERMISSIONS.RELAYS_READ, PERMISSIONS.RELAYS_WRITE);
   const query = relayListQuerySchema.parse({
     cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
     limit: request.nextUrl.searchParams.get("limit") ?? undefined,

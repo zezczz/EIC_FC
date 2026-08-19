@@ -11,6 +11,7 @@ describe("staff permissions", () => {
   beforeAll(async () => {
     await db.relayEntry.deleteMany();
     await db.relay.deleteMany();
+    await db.article.deleteMany();
     await db.user.deleteMany();
     const passwordHash = await hashPassword("captain-password-1");
     const captain = await db.user.create({
@@ -42,19 +43,51 @@ describe("staff permissions", () => {
   });
 
   it("assigns coach staff with preset permissions", async () => {
-    await changeUserRole(memberId, captainId, "STAFF", { actorId: captainId, requestId: "perm-test" }, {
-      staffTitle: "COACH",
-    });
+    await changeUserRole(
+      memberId,
+      captainId,
+      "STAFF",
+      { actorId: captainId, requestId: "perm-test" },
+      {
+        staffTitle: "COACH",
+      },
+    );
     const user = await db.user.findUnique({
       where: { id: memberId },
       select: { role: true, staffTitle: true, permissions: true },
     });
     expect(user?.role).toBe("STAFF");
     expect(user?.staffTitle).toBe("COACH");
-    expect(resolveUserPermissions({
-      role: user!.role,
-      staffTitle: user!.staffTitle,
-      permissions: user!.permissions,
-    })).toContain(PERMISSIONS.RELAYS_WRITE);
+    expect(
+      resolveUserPermissions({
+        role: user!.role,
+        staffTitle: user!.staffTitle,
+        permissions: user!.permissions,
+      }),
+    ).toContain(PERMISSIONS.RELAYS_WRITE);
+  });
+
+  it("revokes all staff access when permissions are emptied", async () => {
+    await changeUserRole(
+      memberId,
+      captainId,
+      "STAFF",
+      { actorId: captainId, requestId: "perm-empty" },
+      {
+        staffTitle: "MANAGER",
+        permissions: [],
+      },
+    );
+    const user = await db.user.findUnique({
+      where: { id: memberId },
+      select: { role: true, staffTitle: true, permissions: true },
+    });
+    expect(
+      resolveUserPermissions({
+        role: user!.role,
+        staffTitle: user!.staffTitle,
+        permissions: user!.permissions,
+      }),
+    ).toEqual([]);
   });
 });

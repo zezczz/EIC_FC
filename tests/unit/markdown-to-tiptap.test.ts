@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { relayEntrySchema } from "@/schemas/relays";
-import {
-  MarkdownImportError,
-  markdownToTiptapDocument,
-} from "@/lib/markdown-to-tiptap";
+import { MarkdownImportError, markdownToTiptapDocument } from "@/lib/markdown-to-tiptap";
 import type { TiptapNode } from "@/schemas/articles";
 
 describe("relayEntrySchema companion names", () => {
@@ -39,15 +36,30 @@ describe("markdownToTiptapDocument", () => {
   });
 
   it("rejects local image paths", () => {
-    expect(() => markdownToTiptapDocument("![本地](./images/a.jpg)")).toThrow(
+    expect(() => markdownToTiptapDocument("![本地](./images/a.jpg)")).toThrow(MarkdownImportError);
+  });
+
+  it("rejects http image urls", () => {
+    expect(() => markdownToTiptapDocument("![图](http://cdn.example.com/a.jpg)")).toThrow(
       MarkdownImportError,
     );
   });
 
-  it("rejects http image urls", () => {
-    expect(() =>
-      markdownToTiptapDocument("![图](http://cdn.example.com/a.jpg)"),
-    ).toThrow(MarkdownImportError);
+  it("converts preset color markers", () => {
+    const doc = markdownToTiptapDocument("{red}红字{/red}普通{blue}蓝字{/blue}");
+    const texts = (doc.content ?? []).flatMap((node) => node.content ?? []);
+    const red = texts.find((node) => node.text === "红字");
+    const blue = texts.find((node) => node.text === "蓝字");
+    expect(red?.marks).toEqual([{ type: "textColor", attrs: { color: "red" } }]);
+    expect(blue?.marks).toEqual([{ type: "textColor", attrs: { color: "blue" } }]);
+  });
+
+  it("rejects unknown or nested colors", () => {
+    expect(() => markdownToTiptapDocument("{pink}x{/pink}")).toThrow(MarkdownImportError);
+    expect(() => markdownToTiptapDocument("{red}{blue}x{/blue}{/red}")).toThrow(
+      MarkdownImportError,
+    );
+    expect(() => markdownToTiptapDocument("{red}未闭合")).toThrow(MarkdownImportError);
   });
 });
 
