@@ -62,3 +62,6 @@ next-env.d.ts
 
 # cloudflare tunnel credentials (local only)
 /.cloudflared/
+
+# IP 自签证书（仅服务器本地）
+/certs/

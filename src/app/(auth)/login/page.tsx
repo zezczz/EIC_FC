@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -58,12 +57,12 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <h1 className="font-heading text-2xl font-black">登录</h1>
-          <CardDescription>使用用户名或邮箱登录 EIC FC</CardDescription>
+          <CardDescription>使用用户名登录</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="identity">用户名或邮箱</Label>
+              <Label htmlFor="identity">用户名</Label>
               <Input
                 id="identity"
                 value={identity}
@@ -87,12 +86,6 @@ export default function LoginPage() {
               {loading ? "登录中…" : "登录"}
             </Button>
           </form>
-          <p className="text-muted-foreground mt-4 text-center text-sm">
-            还没有账号？{" "}
-            <Link href="/register" className="text-primary font-medium hover:underline">
-              申请加入
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </main>

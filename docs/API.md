@@ -4,15 +4,15 @@
 
 ## 认证
 
-| 方法 | 路径                             | 说明                          |
-| ---- | -------------------------------- | ----------------------------- |
-| POST | `/api/auth/register`             | 注册，返回 PENDING 并建立会话 |
-| POST | `/api/auth/callback/credentials` | 登录                          |
+| 方法 | 路径                             | 说明                                      |
+| ---- | -------------------------------- | ----------------------------------------- |
+| POST | `/api/auth/register`             | 已关闭，固定 403                          |
+| POST | `/api/auth/callback/credentials` | 登录                                      |
 | POST | `/api/auth/signout`              | 退出                          |
 | GET  | `/api/auth/session`              | 当前会话                      |
 | GET  | `/api/auth/providers`            | 提供方信息                    |
 
-## 公开文章
+## 球队动态（需 ACTIVE）
 
 | 方法 | 路径                  |
 | ---- | --------------------- |
@@ -59,9 +59,12 @@ Excel 导出包含「活动信息」「正式参加名单」「候补名单」�
 | 方法  | 路径                                                             |
 | ----- | ---------------------------------------------------------------- |
 | GET   | `/api/captain/users`                                             |
+| POST  | `/api/captain/users`                                             |
 | GET   | `/api/captain/users/:id`                                         |
 | POST  | `/api/captain/users/:id/approve\|reject\|suspend\|restore\|role` |
 | PATCH | `/api/captain/users/:id/permissions`                             |
+
+`POST /api/captain/users` 需 `users:review`，直接创建 ACTIVE 队员。字段：`username`、`displayName`、`password`。
 
 ## 成员资料
 
@@ -77,7 +80,7 @@ Excel 导出包含「活动信息」「正式参加名单」「候补名单」�
 
 | 方法  | 路径                | 权限   |
 | ----- | ------------------- | ------ |
-| GET   | `/api/team`         | 公开   |
+| GET   | `/api/team`         | ACTIVE 成员 |
 | GET   | `/api/captain/team` | 队长   |
 | PATCH | `/api/captain/team` | 仅队长 |
 

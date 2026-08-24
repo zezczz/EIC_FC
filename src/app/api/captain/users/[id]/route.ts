@@ -22,7 +22,6 @@ export const GET = handle(async (_request: NextRequest, { requestId, params }) =
       id: true,
       username: true,
       displayName: true,
-      email: true,
       role: true,
       staffTitle: true,
       teamTitle: true,

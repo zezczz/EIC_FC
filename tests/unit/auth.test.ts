@@ -6,13 +6,12 @@ describe("auth schemas", () => {
   it("接受合法注册输入", () => {
     const parsed = registerSchema.parse({
       username: "player01",
-      email: "Player@Example.com",
       displayName: "球员一号",
       password: "long-password",
       confirmPassword: "long-password",
       applicationMessage: "想踢中场",
     });
-    expect(parsed.email).toBe("player@example.com");
+    expect(parsed.username).toBe("player01");
   });
 
   it("拒绝过短密码", () => {
@@ -25,14 +24,12 @@ describe("auth schemas", () => {
 });
 
 describe("audit redact", () => {
-  it("脱敏密码与邮箱", () => {
+  it("脱敏密码", () => {
     const out = redact({
       password: "secret",
-      email: "a@b.com",
       username: "ok",
     }) as Record<string, unknown>;
     expect(out.password).toBe("[REDACTED]");
-    expect(out.email).toBe("[REDACTED]");
     expect(out.username).toBe("ok");
   });
 });

@@ -12,7 +12,6 @@ const memberRecord = {
   id: "member-1",
   username: "player",
   displayName: "队员甲",
-  email: "player@example.com",
   role: "MEMBER" as const,
   teamTitle: "边前卫",
   staffTitle: null,
@@ -26,11 +25,10 @@ const memberRecord = {
 };
 
 describe("profile access", () => {
-  it("defaults hide others student id and email", () => {
+  it("defaults hide others student id", () => {
     const granted = resolveProfilePermissions({ role: "MEMBER", profilePermissions: [] });
     expect(canViewProfileField(granted, "signature", false)).toBe(true);
     expect(canViewProfileField(granted, "studentId", false)).toBe(false);
-    expect(canViewProfileField(granted, "email", false)).toBe(false);
     expect(canEditProfileField(granted, "studentId", true, "MEMBER")).toBe(true);
     expect(canEditProfileField(granted, "studentId", false, "MEMBER")).toBe(false);
   });
@@ -58,7 +56,6 @@ describe("profile access", () => {
     });
     expect(projected.signature).toBe("冲");
     expect(projected.studentId).toBeUndefined();
-    expect(projected.email).toBeUndefined();
   });
 
   it("allows granted edit-others student id", () => {

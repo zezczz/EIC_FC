@@ -19,8 +19,6 @@ describe("team profile", () => {
       data: {
         username: "teamcaptain",
         usernameNormalized: "teamcaptain",
-        email: "teamcaptain@example.com",
-        emailNormalized: "teamcaptain@example.com",
         passwordHash,
         displayName: "球队队长",
         role: "CAPTAIN",
@@ -31,8 +29,6 @@ describe("team profile", () => {
       data: {
         username: "teammember",
         usernameNormalized: "teammember",
-        email: "teammember@example.com",
-        emailNormalized: "teammember@example.com",
         passwordHash,
         displayName: "球队队员",
         role: "MEMBER",
@@ -106,7 +102,7 @@ describe("team profile", () => {
     ).rejects.toThrow();
   });
 
-  it("public read returns the saved profile", async () => {
+  it("member read returns the saved profile", async () => {
     const profile = await getTeamProfile();
     expect(profile.name).toBe("EIC FC");
     expect(profile.summary).toBe("新简介");

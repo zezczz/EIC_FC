@@ -29,20 +29,18 @@ export function SiteHeaderBar({ user }: { user: SiteHeaderUser | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const publicLinks = [
-    { href: "/team", label: "球队介绍" },
-    { href: "/news", label: "球队动态" },
-  ];
   const memberLinks =
     user?.status === "ACTIVE"
       ? [
+          { href: "/team", label: "球队介绍" },
+          { href: "/news", label: "球队动态" },
           { href: "/relay", label: "活动接龙" },
           { href: "/members", label: "队员名册" },
           { href: "/account", label: "我的资料" },
         ]
       : [];
   const staffLinks = user?.isStaff ? [{ href: "/captain", label: "后台" }] : [];
-  const links = [...publicLinks, ...memberLinks, ...staffLinks];
+  const links = [...memberLinks, ...staffLinks];
 
   function isActive(href: string) {
     if (href === "/captain") return pathname === "/captain" || pathname.startsWith("/captain/");
@@ -55,9 +53,11 @@ export function SiteHeaderBar({ user }: { user: SiteHeaderUser | null }) {
         <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={() => setOpen(false)}>
           <SiteCrest className="h-10" decorative />
           <span className="min-w-0 leading-tight">
-            <span className="font-brand block text-xl tracking-wide">EIC FC</span>
+            <span className="font-brand block text-xl tracking-wide">
+              {user ? "EIC FC" : "绿茵随记"}
+            </span>
             <span className="text-muted-foreground hidden text-[10px] tracking-[0.22em] uppercase sm:block">
-              Club House
+              {user ? "Club House" : "Notes"}
             </span>
           </span>
         </Link>
@@ -83,14 +83,9 @@ export function SiteHeaderBar({ user }: { user: SiteHeaderUser | null }) {
               <SignOutButton variant="ghost" size="sm" />
             </>
           ) : (
-            <>
-              <Button render={<Link href="/login" />} variant="ghost" size="sm">
-                登录
-              </Button>
-              <Button render={<Link href="/register" />} size="sm">
-                注册
-              </Button>
-            </>
+            <Button render={<Link href="/login" />} variant="ghost" size="sm">
+              登录
+            </Button>
           )}
         </div>
 
@@ -135,18 +130,13 @@ export function SiteHeaderBar({ user }: { user: SiteHeaderUser | null }) {
                 <SignOutButton variant="outline" size="sm" />
               </>
             ) : (
-              <>
-                <Button
-                  render={<Link href="/login" />}
-                  variant="outline"
-                  onClick={() => setOpen(false)}
-                >
-                  登录
-                </Button>
-                <Button render={<Link href="/register" />} onClick={() => setOpen(false)}>
-                  注册
-                </Button>
-              </>
+              <Button
+                render={<Link href="/login" />}
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                登录
+              </Button>
             )}
           </div>
         </div>

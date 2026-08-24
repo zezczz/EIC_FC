@@ -32,8 +32,6 @@ describe("relay lifecycle", () => {
       data: {
         username: "relaycaptain",
         usernameNormalized: "relaycaptain",
-        email: "relaycaptain@example.com",
-        emailNormalized: "relaycaptain@example.com",
         passwordHash,
         displayName: "接龙队长",
         role: "CAPTAIN",
@@ -44,8 +42,6 @@ describe("relay lifecycle", () => {
       data: {
         username: "relaymember",
         usernameNormalized: "relaymember",
-        email: "relaymember@example.com",
-        emailNormalized: "relaymember@example.com",
         passwordHash,
         displayName: "接龙队员",
         role: "MEMBER",
@@ -145,8 +141,6 @@ describe("relay lifecycle", () => {
       data: {
         username: "relaydeclined",
         usernameNormalized: "relaydeclined",
-        email: "relaydeclined@example.com",
-        emailNormalized: "relaydeclined@example.com",
         passwordHash,
         displayName: "拒绝队员",
         role: "MEMBER",

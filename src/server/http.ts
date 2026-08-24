@@ -37,16 +37,38 @@ function normalizeOrigin(value: string): string {
   }
 }
 
+function trustProxy(): boolean {
+  return process.env.TRUST_PROXY === "true" || env.NODE_ENV === "production";
+}
+
+/** 还原浏览器看到的站点 Origin（Caddy 反代时用转发头） */
+function requestSelfOrigin(request: NextRequest): string | null {
+  const hostHeader = trustProxy()
+    ? (request.headers.get("x-forwarded-host") ?? request.headers.get("host"))
+    : request.headers.get("host");
+  const host = hostHeader?.split(",")[0]?.trim();
+  if (!host) return null;
+
+  const proto = trustProxy()
+    ? (request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "http")
+    : request.nextUrl.protocol.replace(":", "") || "http";
+  return normalizeOrigin(`${proto}://${host}`);
+}
+
 const normalizedTrusted = trustedOrigins.map(normalizeOrigin);
 
 /**
  * 写操作同源校验（CSRF 防护）。
+ * Origin 与当前请求自身一致、或落在 TRUSTED_ORIGINS / APP_URL 时放行。
  * 生产环境缺少 Origin 且 Sec-Fetch-Site 非 same-origin 时拒绝。
  */
 export function assertSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   if (origin) {
-    return normalizedTrusted.includes(normalizeOrigin(origin));
+    const normalized = normalizeOrigin(origin);
+    if (normalizedTrusted.includes(normalized)) return true;
+    const self = requestSelfOrigin(request);
+    return self !== null && normalized === self;
   }
 
   const secFetchSite = request.headers.get("sec-fetch-site");

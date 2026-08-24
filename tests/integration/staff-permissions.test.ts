@@ -18,8 +18,6 @@ describe("staff permissions", () => {
       data: {
         username: "permscaptain",
         usernameNormalized: "permscaptain",
-        email: "permscaptain@example.com",
-        emailNormalized: "permscaptain@example.com",
         passwordHash,
         displayName: "权限队长",
         role: "CAPTAIN",
@@ -30,8 +28,6 @@ describe("staff permissions", () => {
       data: {
         username: "permsmember",
         usernameNormalized: "permsmember",
-        email: "permsmember@example.com",
-        emailNormalized: "permsmember@example.com",
         passwordHash,
         displayName: "权限成员",
         role: "MEMBER",

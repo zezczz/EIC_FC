@@ -13,7 +13,6 @@ export const GET = handle(async (_request: NextRequest, { requestId }) => {
           user: {
             id: sessionUser.id,
             username: sessionUser.username,
-            email: sessionUser.email,
             displayName: sessionUser.displayName,
             role: sessionUser.role,
             status: sessionUser.status,

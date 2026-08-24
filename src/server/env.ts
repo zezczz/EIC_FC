@@ -62,7 +62,10 @@ function loadEnv(): Env {
 
 export const env: Env = loadEnv();
 
-/** 允许的来源列表（用于 Origin/CSRF 校验） */
-export const trustedOrigins: string[] = env.TRUSTED_ORIGINS.split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+/** 允许的来源列表（用于 Origin/CSRF 校验）；始终包含 APP_URL，避免与白名单漂移 */
+export const trustedOrigins: string[] = [
+  ...env.TRUSTED_ORIGINS.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  env.APP_URL,
+];

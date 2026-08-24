@@ -16,8 +16,6 @@ describe("profile flow", () => {
       data: {
         username: "profilemember",
         usernameNormalized: "profilemember",
-        email: "profilemember@example.com",
-        emailNormalized: "profilemember@example.com",
         passwordHash,
         displayName: "资料成员",
         role: "MEMBER",

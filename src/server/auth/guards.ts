@@ -21,7 +21,6 @@ async function freshUserRecord(userId: string) {
     select: {
       id: true,
       username: true,
-      email: true,
       displayName: true,
       role: true,
       staffTitle: true,
@@ -50,7 +49,6 @@ function toSessionUser(
   return {
     id: fresh.id,
     username: fresh.username,
-    email: fresh.email,
     displayName: fresh.displayName,
     role: fresh.role,
     staffTitle: fresh.staffTitle,

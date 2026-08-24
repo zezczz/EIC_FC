@@ -52,12 +52,6 @@ export default async function MemberDetailPage({ params }: PageProps<"/members/[
             </div>
           </div>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            {member.email !== undefined ? (
-              <div>
-                <dt className="text-muted-foreground">邮箱</dt>
-                <dd>{member.email}</dd>
-              </div>
-            ) : null}
             {member.studentId !== undefined ? (
               <div>
                 <dt className="text-muted-foreground">学号</dt>

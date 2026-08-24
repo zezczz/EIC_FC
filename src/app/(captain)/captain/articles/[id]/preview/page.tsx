@@ -28,15 +28,17 @@ export default async function PreviewArticlePage({ params }: { params: Promise<{
         <div>
           <div className="mb-2 flex flex-wrap gap-2">
             <Badge variant="secondary">{ARTICLE_STATUS_LABELS[article.status]}</Badge>
-            {article.status === "DRAFT" && <Badge variant="outline">草稿预览，访客不可见</Badge>}
+            {article.status === "DRAFT" && (
+              <Badge variant="outline">草稿预览，仅队员登录后可见</Badge>
+            )}
           </div>
           <p className="font-brand text-primary text-[0.7rem] tracking-[0.28em] uppercase">
             Preview
           </p>
           <h1 className="mt-1 text-2xl font-bold">预览球队动态</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            公开地址：/news/{article.slug}
-            {article.status !== "PUBLISHED" ? "（尚未公开）" : ""}
+            队员可见地址：/news/{article.slug}
+            {article.status !== "PUBLISHED" ? "（尚未发布）" : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -49,7 +51,7 @@ export default async function PreviewArticlePage({ params }: { params: Promise<{
           </Button>
           {article.status === "PUBLISHED" && (
             <Button size="sm" render={<Link href={`/news/${article.slug}`} target="_blank" />}>
-              查看公开页
+              查看队员页
             </Button>
           )}
         </div>

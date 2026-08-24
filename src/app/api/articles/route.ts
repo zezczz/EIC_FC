@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { articleListQuerySchema } from "@/schemas/articles";
 import { handle } from "@/server/http";
+import { requireActiveMember } from "@/server/auth/guards";
 import { listPublicArticles } from "@/server/articles/service";
 
 export const GET = handle(async (request: NextRequest, { requestId }) => {
+  await requireActiveMember();
   const query = articleListQuerySchema.pick({ cursor: true, limit: true }).parse({
     cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
     limit: request.nextUrl.searchParams.get("limit") ?? undefined,

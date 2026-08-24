@@ -4,15 +4,18 @@ import { PageHeader } from "@/components/brand/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { listPublicArticles } from "@/server/articles/service";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "球队动态",
-  description: "查看 EIC FC 最新球队公告、比赛记录与活动动态。",
+  description: "查看球队公告、比赛记录与活动动态。",
+  robots: { index: false },
 };
 
 export default async function NewsPage() {
   const { items } = await listPublicArticles({ limit: 30 });
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <PageHeader
         className="mb-8"
         eyebrow="Club News"
@@ -32,6 +35,6 @@ export default async function NewsPage() {
           </CardContent>
         </Card>
       )}
-    </main>
+    </div>
   );
 }

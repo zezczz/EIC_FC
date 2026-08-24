@@ -8,30 +8,30 @@
 
 ## 1. 项目目标
 
-本项目用于建设一套业余球队官方网站，提供：
+本项目用于建设一套业余球队内部站点，公开页按个人备案收口为兴趣记录「绿茵随记」，提供：
 
-1. 公开展示球队动态；
+1. 已审核队员查看球队动态（未登录不可见）；
 2. 队长创建、编辑、预览、发布、置顶、取消置顶、删除和恢复文章；
 3. 已审核队员参加活动接龙；
-4. 用户注册、登录和队长审核；
+4. 登录，以及队长后台直接开通队员账号；
 5. 队长管理成员、文章、接龙和审计记录；
 6. 在中国大陆云服务器或旧电脑上通过 Docker 部署；
 7. 具备最基本的权限控制、安全防护、备份、恢复、日志和自动化测试。
 
-备案和页面用语统一采用“球队动态”或“球队公告”，不把网站描述为互联网新闻服务。网站内容只涉及本球队，不提供社会新闻聚合、公众投稿、论坛或商业交易。
+备案和页面用语：未登录公开页使用「绿茵随记」和个人兴趣记录，不把网站描述为互联网新闻服务或球队官网招新。登录后对内仍可使用球队动态、球队公告等用语。网站内容只涉及本球队，不提供社会新闻聚合、公众投稿、论坛或商业交易。
 
 ## 2. 首期范围
 
 ### 2.1 必须实现
 
-- 响应式首页；
-- 球队动态列表和详情；
+- 响应式首页（公开页为个人兴趣记录，无招新、无动态列表）；
+- 球队动态列表和详情（仅已审核队员）；
 - Tiptap 富文本编辑器；
 - 图片上传、封面和图注；
 - 草稿、发布、归档、置顶和软删除；
-- 用户名或邮箱加密码登录；
-- 注册后等待队长审核；
-- 队长批准、拒绝、停用和恢复成员；
+- 用户名加密码登录；
+- 队长后台直接开通 ACTIVE 队员；
+- 队长批准、拒绝、停用和恢复成员（遗留 PENDING 申请仍可用）；
 - 活动接龙、容量、候补、截止和取消报名；
 - 队长后台；
 - 审计日志；
@@ -119,7 +119,7 @@ flowchart LR
 
 ### 4.2 缓存策略
 
-- 公开文章列表和详情允许使用 Next.js 缓存；
+- 公开首页允许被索引；球队动态列表和详情仅 ACTIVE 队员可见，不进 sitemap、不对搜索引擎开放；
 - 发布、取消发布、置顶、删除和恢复后必须执行对应路径的缓存失效；
 - 用户、审核、接龙和后台页面不得被公共缓存；
 - 不使用缓存保存权限事实；
@@ -136,14 +136,14 @@ flowchart LR
 
 ### 5.2 用户状态
 
-- `PENDING`：注册成功，等待队长审核；
+- `PENDING`：遗留自助申请，等待队长审核；
 - `ACTIVE`：审核通过；
 - `REJECTED`：审核拒绝；
 - `SUSPENDED`：已停用。
 
 ### 5.3 权限规则
 
-- 访客可以阅读已发布且未删除的球队动态；
+- 访客只能看到个人兴趣首页和登录页，不能阅读球队动态或球队介绍；
 - PENDING 只能查看审核状态、更新允许修改的个人资料和退出；
 - REJECTED 只能查看拒绝原因和退出；
 - SUSPENDED 不得创建新会话，已有会话立即失效；
@@ -220,8 +220,6 @@ stateDiagram-v2
 id                  UUID PK
 username            varchar(32) unique
 usernameNormalized  varchar(32) unique
-email               varchar(254) unique
-emailNormalized     varchar(254) unique
 passwordHash        text
 displayName         varchar(50)
 avatarAssetId       UUID nullable FK MediaAsset
@@ -248,7 +246,6 @@ deletedAt           timestamptz nullable
 要求：
 
 - 用户名只允许字母、数字、下划线和中文，比较时使用规范化字段；
-- 邮箱保存原始展示值和小写规范化值；
 - 不保存明文密码；
 - 默认角色为 MEMBER、状态为 PENDING；
 - 头像只能引用 READY 状态的图片；
@@ -581,36 +578,24 @@ src/app/
 ### 11.2 认证
 
 ```text
-POST /api/auth/register
+POST /api/auth/register                 # 已关闭，固定返回 403
 GET  /api/auth/session
 GET  /api/auth/providers
 POST /api/auth/callback/credentials
 POST /api/auth/signout
+POST /api/captain/users                 # 队长直接创建 ACTIVE 队员
 ```
 
-注册请求：
+公开自助注册已关闭。队员由具备 `users:review` 的队长在后台创建（用户名、显示名、初始密码），状态为 ACTIVE。
 
-```json
-{
-  "username": "player01",
-  "email": "player@example.com",
-  "displayName": "球员一号",
-  "password": "long-password",
-  "confirmPassword": "long-password",
-  "applicationMessage": "球队成员"
-}
-```
-
-注册成功返回 201 和 PENDING 状态，不自动授予 MEMBER 访问权。
-
-### 11.3 公开文章
+### 11.3 球队动态（队员可见）
 
 ```text
 GET /api/articles?cursor=&limit=20
 GET /api/articles/:slug
 ```
 
-只返回 PUBLISHED、未删除文章。排序为置顶优先、`pinOrder` 升序、发布时间倒序。
+要求 ACTIVE 会话。只返回 PUBLISHED、未删除文章。排序为置顶优先、`pinOrder` 升序、发布时间倒序。
 
 ### 11.4 队长文章接口
 
@@ -745,9 +730,9 @@ src/
 
 ## 14. SEO
 
-- 公开文章采用服务端渲染；
-- 每篇文章生成 title、description、canonical、Open Graph；
-- 生成 `sitemap.xml` 和 `robots.txt`；
+- 公开首页采用服务端渲染；
+- 球队动态仅队员可见，设置 `noindex`，不写入 sitemap；
+- 生成 `sitemap.xml`（仅首页）和 `robots.txt`（只允许 `/`）；
 - 草稿、后台、登录、注册和接龙页面设置 `noindex`；
 - 已删除文章返回 404 或 410；
 - slug 修改如确有需要，必须保存旧 slug 并做 301；首期默认不允许修改；
@@ -873,8 +858,8 @@ BACKUP_RETENTION_MONTHLY
 
 要求：
 
-- 从无回显交互或临时环境变量读取用户名、邮箱、显示名和密码；
-- 校验用户名、邮箱和密码；
+- 从无回显交互或临时环境变量读取用户名、显示名和密码；
+- 校验用户名和密码；
 - 密码经 Argon2id 哈希；
 - 在事务中创建 ACTIVE/CAPTAIN；
 - 已存在 ACTIVE CAPTAIN 时默认拒绝；
@@ -940,7 +925,7 @@ BACKUP_RETENTION_MONTHLY
 - `/api/health/live`；
 - `/api/health/ready`；
 - 首页；
-- 一篇公开文章读取；
+- 登录页可打开；
 - TLS 证书剩余时间。
 
 任何必需检查失败时返回非 0，供 cron 或监控使用。
@@ -1051,7 +1036,7 @@ errorCode nullable
 - 密码、密码哈希；
 - Cookie、Session token；
 - 对象存储 secret；
-- 完整邮箱和手机号；
+- 完整手机号；
 - 完整注册或登录请求体。
 
 至少监控：
@@ -1098,11 +1083,11 @@ errorCode nullable
 
 必须覆盖：
 
-1. 新用户注册并看到待审核页；
-2. 队长批准用户；
-3. 用户重新登录并进入接龙；
-4. 队长发布带封面的富文本文章；
-5. 访客阅读文章；
+1. 队长后台开通队员账号；
+2. 队员登录并进入接龙；
+3. 队长发布带封面的富文本文章；
+4. 已登录 ACTIVE 队员阅读文章；
+5. 未登录访问 `/news` 跳转登录；
 6. 队长置顶和删除文章；
 7. 多名队员报名直至满员；
 8. 后续队员进入候补；
@@ -1143,7 +1128,7 @@ errorCode nullable
 1. 核实 `czzczzzez.cloud` 已实名认证；
 2. 域名持有人与备案主体保持一致；
 3. 购买可提供备案服务的大陆服务器；
-4. 向云厂商备案专员确认注册、审核和接龙功能是否符合当地个人备案要求；
+4. 按 [ICP_PERSONAL.md](ICP_PERSONAL.md) 收口公开页后再提交个人备案；
 5. 提交 ICP 备案；
 6. 备案期间不把域名解析到大陆服务器；
 7. 初始化 Ubuntu 和 SSH；
@@ -1154,12 +1139,12 @@ errorCode nullable
 12. 启动 Caddy 和应用；
 13. 执行迁移；
 14. 执行 `captain:bootstrap`；
-15. 验证 HTTPS、安全头和关键流程；
+15. 验证 HTTPS、安全头和关键流程（未登录看不到动态和招新）；
 16. 首页展示 ICP 备案号；
 17. 按现行要求办理公安联网备案；
 18. 开启监控和异地备份。
 
-如果个人备案无法覆盖交互功能，正式备选为中国香港云服务器，而不是使用技术手段绕过备案。
+若以后要恢复公开招新，再迁香港节点或改办单位备案，而不是改回公开入口。
 
 ## 24. 旧电脑部署
 
@@ -1259,6 +1244,7 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 │  ├─ DEPLOYMENT.md
 │  ├─ RUNBOOK.md
 │  ├─ GO_LIVE.md
+│  ├─ ICP_PERSONAL.md          # 大陆个人备案：收口公开招新与动态
 │  ├─ deployment-home-server.md
 │  └─ BUGS.md
 └─ .github/workflows/ci.yml
@@ -1280,7 +1266,7 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 ### 阶段二：认证与审核
 
 - User 和 Session；
-- 注册、登录、退出；
+- 登录、退出；队长后台开通队员；
 - 状态页；
 - 服务端权限守卫；
 - 首位队长脚本；
@@ -1294,7 +1280,7 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 - Tiptap 编辑器；
 - 草稿、预览、发布；
 - 置顶、归档、删除和恢复；
-- 公开列表、详情和 SEO；
+- 队员可见列表、详情；sitemap 仅首页；
 - 安全清洗和测试。
 
 ### 阶段四：接龙
@@ -1319,9 +1305,10 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 ### 阶段六：备案与上线
 
 - 购买大陆云服务器；
-- ICP 备案；
+- 按 ICP_PERSONAL.md 收口公开页后提交个人备案；
 - 部署、迁移和初始化队长；
 - DNS、HTTPS、安全验证；
+- 验收：未登录看不到动态和招新；
 - 公安联网备案；
 - 正式验收。
 
@@ -1330,7 +1317,7 @@ Cloudflare Tunnel 不等于备案，也不能保证中国大陆访问质量。�
 只有同时满足以下条件才算完成：
 
 - 所有必须功能可用；
-- 未审核用户无法访问接龙；
+- 未登录用户无法访问球队动态、球队介绍和接龙；
 - MEMBER 无法调用任何队长接口；
 - 队长能完整管理文章和接龙；
 - 文章支持美观、移动端友好的富文本展示；

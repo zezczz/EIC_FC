@@ -19,7 +19,6 @@ export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 天
 export type SessionUser = {
   id: string;
   username: string;
-  email: string;
   displayName: string;
   role: Role;
   staffTitle?: StaffTitle | null;
@@ -38,7 +37,7 @@ function sessionCookieOptions(): {
 } {
   return {
     httpOnly: true,
-    secure: env.NODE_ENV === "production",
+    secure: env.APP_URL.startsWith("https://"),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
@@ -104,7 +103,6 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
         select: {
           id: true,
           username: true,
-          email: true,
           displayName: true,
           role: true,
           status: true,
@@ -126,7 +124,6 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   return {
     id: session.user.id,
     username: session.user.username,
-    email: session.user.email,
     displayName: session.user.displayName,
     role: session.user.role,
     status: session.user.status,

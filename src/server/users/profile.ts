@@ -58,7 +58,6 @@ const PROFILE_SELECT = {
   id: true,
   username: true,
   displayName: true,
-  email: true,
   role: true,
   teamTitle: true,
   staffTitle: true,
@@ -76,7 +75,6 @@ function toRecord(user: {
   id: string;
   username: string;
   displayName: string;
-  email: string;
   role: "MEMBER" | "STAFF" | "CAPTAIN";
   teamTitle: string | null;
   staffTitle: "COACH" | "VICE_CAPTAIN" | "MANAGER" | null;
@@ -92,7 +90,6 @@ function toRecord(user: {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
-    email: user.email,
     role: user.role,
     teamTitle: user.teamTitle,
     staffTitle: user.staffTitle,

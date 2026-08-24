@@ -8,8 +8,14 @@ import { AppError } from "@/server/errors";
 import { logger } from "@/server/logger";
 import { getPublicArticle } from "@/server/articles/service";
 import { normalizeArticleSlug } from "@/server/articles/slug";
+import { getSessionUser } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
+
+const privateNewsMeta: Metadata = {
+  title: "球队动态",
+  robots: { index: false },
+};
 
 async function loadPublicArticle(rawSlug: string) {
   const slug = normalizeArticleSlug(rawSlug);
@@ -28,6 +34,11 @@ async function loadPublicArticle(rawSlug: string) {
 }
 
 export async function generateMetadata({ params }: PageProps<"/news/[slug]">): Promise<Metadata> {
+  const session = await getSessionUser();
+  if (!session || session.status !== "ACTIVE") {
+    return privateNewsMeta;
+  }
+
   const { slug: rawSlug } = await params;
   const slug = normalizeArticleSlug(rawSlug);
   const article = await db.article.findFirst({
@@ -48,7 +59,7 @@ export async function generateMetadata({ params }: PageProps<"/news/[slug]">): P
   return {
     title: article.title,
     description: article.summary,
-    alternates: { canonical: `${env.APP_URL}/news/${slug}` },
+    robots: { index: false },
     openGraph: {
       title: article.title,
       description: article.summary,
@@ -63,7 +74,7 @@ export default async function NewsDetailPage({ params }: PageProps<"/news/[slug]
   const article = await loadPublicArticle(rawSlug);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-3xl px-4 py-10">
       <article>
         <header className="border-sideline mb-8 border-b pb-8">
           <p className="font-brand text-primary mb-3 text-[0.7rem] tracking-[0.28em] uppercase">
@@ -80,6 +91,6 @@ export default async function NewsDetailPage({ params }: PageProps<"/news/[slug]
         </header>
         <ArticleContent content={article.contentJson} />
       </article>
-    </main>
+    </div>
   );
 }

@@ -1,12 +1,11 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
-import { registerUser } from "@/server/auth/service";
-import { approveUser, rejectUser } from "@/server/users/service";
+import { createSession, hashSessionToken } from "@/server/auth/session";
+import { createMemberByCaptain, approveUser, rejectUser } from "@/server/users/service";
 import { db } from "@/server/db";
-import { hashSessionToken } from "@/server/auth/session";
 
 /**
- * 集成测试：注册 → 审核 → 登录会话。
+ * 集成测试：队长开通队员、审核遗留 PENDING、登录会话。
  * 需要本地 PostgreSQL（compose.dev 或 CI service）。
  */
 describe("auth approval flow", () => {
@@ -20,14 +19,12 @@ describe("auth approval flow", () => {
     await db.user.deleteMany();
   });
 
-  it("注册为 PENDING，队长批准后为 ACTIVE", async () => {
+  it("队长直接创建队员为 ACTIVE", async () => {
     const passwordHash = await hashPassword("captain-password-1");
     const captain = await db.user.create({
       data: {
         username: "captain1",
         usernameNormalized: "captain1",
-        email: "captain1@example.com",
-        emailNormalized: "captain1@example.com",
         passwordHash,
         displayName: "队长",
         role: "CAPTAIN",
@@ -35,17 +32,41 @@ describe("auth approval flow", () => {
       },
     });
 
-    const pending = await registerUser(
+    const member = await createMemberByCaptain(
       {
         username: "player01",
-        email: "player01@example.com",
         displayName: "球员",
         password: "player-password",
-        confirmPassword: "player-password",
       },
-      "127.0.0.1",
+      captain.id,
+      {
+        actorId: captain.id,
+        requestId: "test_create_member",
+        ip: "127.0.0.1",
+      },
     );
-    expect(pending.status).toBe("PENDING");
+    expect(member.status).toBe("ACTIVE");
+
+    const refreshed = await db.user.findUniqueOrThrow({ where: { id: member.id } });
+    expect(refreshed.role).toBe("MEMBER");
+    expect(refreshed.reviewedById).toBe(captain.id);
+  });
+
+  it("遗留 PENDING 用户经队长批准后为 ACTIVE", async () => {
+    const captain = await db.user.findFirstOrThrow({
+      where: { role: "CAPTAIN", status: "ACTIVE" },
+    });
+    const passwordHash = await hashPassword("player-password");
+    const pending = await db.user.create({
+      data: {
+        username: "player-pending",
+        usernameNormalized: "player-pending",
+        passwordHash,
+        displayName: "待审球员",
+        role: "MEMBER",
+        status: "PENDING",
+      },
+    });
 
     await approveUser(pending.id, captain.id, {
       actorId: captain.id,
@@ -61,16 +82,18 @@ describe("auth approval flow", () => {
     const captain = await db.user.findFirstOrThrow({
       where: { role: "CAPTAIN", status: "ACTIVE" },
     });
-    const user = await registerUser(
-      {
+    const passwordHash = await hashPassword("player-password");
+    const user = await db.user.create({
+      data: {
         username: "player02",
-        email: "player02@example.com",
+        usernameNormalized: "player02",
+        passwordHash,
         displayName: "球员2",
-        password: "player-password",
-        confirmPassword: "player-password",
+        role: "MEMBER",
+        status: "PENDING",
       },
-      "127.0.0.2",
-    );
+    });
+    await createSession(user.id);
     const sessionsBefore = await db.session.count({ where: { userId: user.id } });
     expect(sessionsBefore).toBeGreaterThan(0);
 

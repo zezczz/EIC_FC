@@ -18,7 +18,6 @@ export default async function AccountPage() {
     select: {
       username: true,
       displayName: true,
-      email: true,
       role: true,
       staffTitle: true,
       teamTitle: true,
@@ -58,10 +57,6 @@ export default async function AccountPage() {
             <div>
               <dt className="text-muted-foreground">用户名</dt>
               <dd>@{user.username}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">邮箱</dt>
-              <dd>{user.email}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">加入时间</dt>

@@ -12,7 +12,7 @@ type EntryWithUser = {
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
-  user: { username: string; email: string; displayName: string };
+  user: { username: string; displayName: string };
 };
 
 type ParticipantRow = {
@@ -21,7 +21,6 @@ type ParticipantRow = {
   participantType: "报名成员" | "同行人员" | "历史数据未记录姓名";
   registrantDisplayName: string;
   registrantUsername: string;
-  registrantEmail: string;
   note: string;
   registeredAt: string;
 };
@@ -37,7 +36,6 @@ function expandParticipantRows(
     const base = {
       registrantDisplayName: entry.user.displayName,
       registrantUsername: entry.user.username,
-      registrantEmail: entry.user.email,
       note: entry.note ?? "",
       registeredAt: formatDateTime(entry.createdAt),
     };
@@ -98,7 +96,7 @@ export async function buildRelayExportWorkbook(relayId: string) {
       entries: {
         orderBy: [{ response: "asc" }, { createdAt: "asc" }],
         include: {
-          user: { select: { username: true, email: true, displayName: true } },
+          user: { select: { username: true, displayName: true } },
         },
       },
     },
@@ -173,7 +171,6 @@ export async function buildRelayExportWorkbook(relayId: string) {
     { header: "序号", key: "index", width: 8 },
     { header: "昵称", key: "displayName", width: 16 },
     { header: "用户名", key: "username", width: 18 },
-    { header: "邮箱", key: "email", width: 28 },
     { header: "报名状态", key: "response", width: 12 },
     { header: "参加人数", key: "participantCount", width: 10 },
     { header: "同行人员", key: "companions", width: 32 },
@@ -186,7 +183,6 @@ export async function buildRelayExportWorkbook(relayId: string) {
       index: index + 1,
       displayName: entry.user.displayName,
       username: entry.user.username,
-      email: entry.user.email,
       response: RELAY_RESPONSE_LABELS[entry.response],
       participantCount: entry.participantCount,
       companions:
@@ -242,7 +238,6 @@ function addParticipantSheet(workbook: ExcelJS.Workbook, title: string, rows: Pa
     { header: "人员类型", key: "participantType", width: 18 },
     { header: "报名成员", key: "registrantDisplayName", width: 16 },
     { header: "用户名", key: "registrantUsername", width: 18 },
-    { header: "邮箱", key: "registrantEmail", width: 28 },
     { header: "备注", key: "note", width: 28 },
     { header: "报名时间", key: "registeredAt", width: 22 },
   ];
@@ -253,7 +248,6 @@ function addParticipantSheet(workbook: ExcelJS.Workbook, title: string, rows: Pa
       participantType: "",
       registrantDisplayName: "",
       registrantUsername: "",
-      registrantEmail: "",
       note: "",
       registeredAt: "",
     });

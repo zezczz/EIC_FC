@@ -22,18 +22,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "EIC FC 球队动态",
-    template: "%s | EIC FC",
+    default: "绿茵随记",
+    template: "%s | 绿茵随记",
   },
-  description: "EIC FC 业余足球队官方网站：球队动态、活动接龙与队员交流。",
-  applicationName: "EIC FC",
+  description: "个人业余足球训练与比赛心得记录。",
+  applicationName: "绿茵随记",
   openGraph: {
     type: "website",
     locale: "zh_CN",
-    siteName: "EIC FC",
+    siteName: "绿茵随记",
   },
   twitter: {
     card: "summary_large_image",

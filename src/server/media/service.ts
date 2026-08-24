@@ -7,7 +7,7 @@ import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { AppError, errConflict, errNotFound } from "@/server/errors";
 import { writeAudit } from "@/server/audit";
-import { s3 } from "@/server/media/s3";
+import { s3, s3Presign } from "@/server/media/s3";
 
 const MIME_EXTENSIONS = {
   "image/jpeg": "jpg",
@@ -76,7 +76,7 @@ export async function createUploadIntent(
     select: { id: true, storageKey: true, status: true },
   });
   const uploadUrl = await getSignedUrl(
-    s3,
+    s3Presign,
     new PutObjectCommand({
       Bucket: env.S3_BUCKET,
       Key: storageKey,

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -37,7 +38,6 @@ type UserItem = {
   id: string;
   username: string;
   displayName: string;
-  email: string;
   role: "MEMBER" | "STAFF" | "CAPTAIN";
   staffTitle?: "COACH" | "VICE_CAPTAIN" | "MANAGER" | null;
   teamTitle?: string | null;
@@ -49,7 +49,7 @@ type UserItem = {
   createdAt: string;
 };
 
-type DialogMode = "reject" | "suspend" | "access" | null;
+type DialogMode = "reject" | "suspend" | "access" | "create" | null;
 
 export default function CaptainUsersClient() {
   const searchParams = useSearchParams();
@@ -65,6 +65,11 @@ export default function CaptainUsersClient() {
   const [modulePermissions, setModulePermissions] = useState<Permission[]>([]);
   const [profileCodes, setProfileCodes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    username: "",
+    displayName: "",
+    password: "",
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -178,7 +183,18 @@ export default function CaptainUsersClient() {
       <PageHeader
         eyebrow="Squad"
         title="成员权限"
-        description="批准、拒绝、停用，并按人配置查看/编辑权限与职务名称"
+        description="批准、拒绝、停用，或直接开通队员账号；按人配置查看/编辑权限与职务名称"
+        actions={
+          <Button
+            size="sm"
+            onClick={() => {
+              setCreateForm({ username: "", displayName: "", password: "" });
+              setDialogMode("create");
+            }}
+          >
+            添加队员
+          </Button>
+        }
       />
 
       <div className="flex flex-wrap gap-2">
@@ -217,9 +233,7 @@ export default function CaptainUsersClient() {
                     <Badge variant="secondary">{STAFF_TITLE_LABELS[u.staffTitle]}</Badge>
                   ) : null}
                 </div>
-                <CardDescription>
-                  {u.email} · 注册于 {formatDateTime(u.createdAt)}
-                </CardDescription>
+                <CardDescription>注册于 {formatDateTime(u.createdAt)}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {u.applicationMessage && (
@@ -317,7 +331,87 @@ export default function CaptainUsersClient() {
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          {dialogMode === "access" && target ? (
+          {dialogMode === "create" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>添加队员</DialogTitle>
+              </DialogHeader>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void (async () => {
+                    setBusy(true);
+                    try {
+                      const res = await fetch("/api/captain/users", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(createForm),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        toast.error(data.message || "创建失败");
+                        return;
+                      }
+                      toast.success("已开通队员账号");
+                      setDialogMode(null);
+                      setCreateForm({ username: "", displayName: "", password: "" });
+                      await load();
+                    } finally {
+                      setBusy(false);
+                    }
+                  })();
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="create-username">用户名</Label>
+                  <Input
+                    id="create-username"
+                    value={createForm.username}
+                    onChange={(e) =>
+                      setCreateForm((current) => ({ ...current, username: e.target.value }))
+                    }
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-displayName">显示名</Label>
+                  <Input
+                    id="create-displayName"
+                    value={createForm.displayName}
+                    onChange={(e) =>
+                      setCreateForm((current) => ({ ...current, displayName: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-password">初始密码</Label>
+                  <Input
+                    id="create-password"
+                    type="password"
+                    minLength={10}
+                    maxLength={128}
+                    value={createForm.password}
+                    onChange={(e) =>
+                      setCreateForm((current) => ({ ...current, password: e.target.value }))
+                    }
+                    autoComplete="new-password"
+                    required
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    至少 10 位；线下告知队员后请提醒其尽快修改。
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={busy}>
+                    {busy ? "创建中…" : "创建账号"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          ) : dialogMode === "access" && target ? (
             <>
               <DialogHeader>
                 <DialogTitle>管理 {target.displayName} 的权限</DialogTitle>

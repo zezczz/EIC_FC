@@ -29,8 +29,6 @@ describe("article publish flow", () => {
       data: {
         username: "articlecaptain",
         usernameNormalized: "articlecaptain",
-        email: "articlecaptain@example.com",
-        emailNormalized: "articlecaptain@example.com",
         passwordHash,
         displayName: "动态队长",
         role: "CAPTAIN",
@@ -69,7 +67,7 @@ describe("article publish flow", () => {
     expect(publicView.contentJson).toEqual(EMPTY_DOC);
   });
 
-  it("publishes Chinese slug articles for public access", async () => {
+  it("publishes Chinese slug articles for member access", async () => {
     const title = "本地验证测试新闻";
     const article = await createArticle(
       {

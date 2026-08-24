@@ -8,8 +8,10 @@ import {
 import { persistProfilePermissions } from "@/server/users/profile-access";
 import { db } from "@/server/db";
 import { errConflict, errForbidden, errNotFound } from "@/server/errors";
+import { hashPassword } from "@/server/auth/password";
 import { revokeAllSessions } from "@/server/auth/session";
 import { writeAudit, type AuditInput } from "@/server/audit";
+import type { CreateMemberInput } from "@/schemas/users";
 
 /**
  * 用户审核服务（ARCHITECTURE.md §5、§6.1、§11.6）。
@@ -41,6 +43,64 @@ function auditEntry(ctx: ReviewContext, input: Partial<AuditInput>): AuditInput 
     before: input.before,
     after: input.after,
     reason: input.reason,
+  };
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLocaleLowerCase("zh-CN");
+}
+
+/** 队长直接开通 ACTIVE 队员，不走公开注册。 */
+export async function createMemberByCaptain(
+  input: CreateMemberInput,
+  reviewerId: string,
+  ctx: ReviewContext,
+) {
+  const username = input.username.trim();
+  const usernameNormalized = normalizeUsername(username);
+
+  const existing = await db.user.findFirst({
+    where: {
+      OR: [{ usernameNormalized }, { username }],
+    },
+    select: { usernameNormalized: true },
+  });
+  if (existing) {
+    throw errConflict("该用户名已被使用");
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  const user = await db.user.create({
+    data: {
+      username,
+      usernameNormalized,
+      passwordHash,
+      displayName: input.displayName.trim(),
+      status: "ACTIVE",
+      role: "MEMBER",
+      reviewedById: reviewerId,
+      reviewedAt: new Date(),
+    },
+  });
+
+  await writeAudit(
+    auditEntry(ctx, {
+      action: "USER_CREATE",
+      resourceId: user.id,
+      after: {
+        username: user.username,
+        displayName: user.displayName,
+        status: user.status,
+        role: user.role,
+      },
+    }),
+  );
+
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    status: user.status,
   };
 }
 
@@ -414,7 +474,6 @@ export async function listUsers(input: {
       id: true,
       username: true,
       displayName: true,
-      email: true,
       role: true,
       staffTitle: true,
       teamTitle: true,

@@ -3,7 +3,6 @@ export const PROFILE_FIELDS = [
   "avatar",
   "signature",
   "studentId",
-  "email",
   "fieldPositions",
   "preferredFoot",
   "teamTitle",
@@ -16,7 +15,6 @@ export const PROFILE_FIELD_LABELS: Record<ProfileField, string> = {
   avatar: "头像",
   signature: "个性签名",
   studentId: "学号",
-  email: "邮箱",
   fieldPositions: "场上位置",
   preferredFoot: "惯用脚",
   teamTitle: "职务",
@@ -106,7 +104,6 @@ export type MemberProfileRecord = {
   id: string;
   username: string;
   displayName: string;
-  email: string;
   role: "MEMBER" | "STAFF" | "CAPTAIN";
   teamTitle: string | null;
   staffTitle: "COACH" | "VICE_CAPTAIN" | "MANAGER" | null;
@@ -130,7 +127,6 @@ export type ProjectedMemberProfile = {
   staffTitle: "COACH" | "VICE_CAPTAIN" | "MANAGER" | null;
   signature?: string | null;
   studentId?: string | null;
-  email?: string;
   fieldPositions?: string[];
   preferredFoot?: "LEFT" | "RIGHT" | "BOTH" | null;
   avatarAssetId?: string | null;
@@ -160,7 +156,6 @@ export function projectMemberProfile(
 
   if (canViewProfileField(granted, "signature", isSelf)) projected.signature = record.signature;
   if (canViewProfileField(granted, "studentId", isSelf)) projected.studentId = record.studentId;
-  if (canViewProfileField(granted, "email", isSelf)) projected.email = record.email;
   if (canViewProfileField(granted, "fieldPositions", isSelf)) {
     projected.fieldPositions = record.fieldPositions;
   }

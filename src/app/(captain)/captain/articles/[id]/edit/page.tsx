@@ -27,7 +27,7 @@ export default async function EditArticlePage({
         <div>
           <div className="mb-2 flex flex-wrap gap-2">
             <Badge variant="secondary">{ARTICLE_STATUS_LABELS[article.status]}</Badge>
-            {article.status === "DRAFT" && <Badge variant="outline">草稿尚未公开</Badge>}
+            {article.status === "DRAFT" && <Badge variant="outline">草稿尚未对队员可见</Badge>}
           </div>
           <p className="font-brand text-primary text-[0.7rem] tracking-[0.28em] uppercase">
             Newsroom
@@ -36,13 +36,13 @@ export default async function EditArticlePage({
           <p className="text-muted-foreground mt-1 text-sm">
             {article.status === "PUBLISHED" ? (
               <>
-                公开地址：
+                队员可见地址：
                 <Link href={`/news/${article.slug}`} className="text-primary hover:underline">
                   /news/{article.slug}
                 </Link>
               </>
             ) : (
-              <>发布后公开地址：/news/{article.slug}</>
+              <>发布后队员可见地址：/news/{article.slug}</>
             )}
             {" · "}
             当前版本 {article.version}

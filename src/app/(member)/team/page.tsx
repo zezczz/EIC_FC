@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,14 +9,19 @@ import { SiteCrest } from "@/components/brand/site-crest";
 import { getSessionUser } from "@/server/auth/session";
 import { getTeamProfile } from "@/server/team/service";
 
-export const metadata = { title: "球队介绍" };
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "球队介绍",
+  robots: { index: false },
+};
 
 export default async function TeamPage() {
   const [profile, session] = await Promise.all([getTeamProfile(), getSessionUser()]);
   const canEdit = session?.role === "CAPTAIN";
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <PageHeader
         eyebrow="Club"
         title={profile.name}
@@ -101,6 +107,6 @@ export default async function TeamPage() {
           </div>
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

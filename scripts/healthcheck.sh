@@ -25,7 +25,7 @@ check() {
 check live "$APP_URL/api/health/live"
 check ready "$APP_URL/api/health/ready"
 check home "$APP_URL/"
-check news "$APP_URL/news"
+check login "$APP_URL/login"
 
 if [[ "$APP_URL" == https://* ]]; then
   host="${APP_URL#https://}"

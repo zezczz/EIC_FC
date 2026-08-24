@@ -1,9 +1,18 @@
 import { z } from "zod";
 import { routeUuidParam } from "@/schemas/common";
+import { usernameSchema, displayNameSchema, passwordSchema } from "@/schemas/auth";
 
 /** 队长用户管理 schema（ARCHITECTURE.md §11.6） */
 
 export const uuidParamSchema = routeUuidParam;
+
+export const createMemberSchema = z.object({
+  username: usernameSchema,
+  displayName: displayNameSchema,
+  password: passwordSchema,
+});
+
+export type CreateMemberInput = z.infer<typeof createMemberSchema>;
 
 export const rejectUserSchema = z.object({
   reason: z.string().trim().min(1, "拒绝原因不能为空").max(500, "拒绝原因最多 500 字"),

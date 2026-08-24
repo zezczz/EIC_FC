@@ -4,11 +4,11 @@
  * 用法：
  *   pnpm captain:bootstrap
  *   # 或提供环境变量（避免交互输入）：
- *   CAPTAIN_USERNAME=cap CAPTAIN_EMAIL=cap@example.com CAPTAIN_DISPLAY_NAME=队长 \
+ *   CAPTAIN_USERNAME=cap CAPTAIN_DISPLAY_NAME=队长 \
  *   CAPTAIN_PASSWORD='long-password' pnpm captain:bootstrap
  *
  * 要求：
- * - 从无回显交互或临时环境变量读取用户名、邮箱、显示名和密码
+ * - 从无回显交互或临时环境变量读取用户名、显示名和密码
  * - 密码经 Argon2id 哈希
  * - 在事务中创建 ACTIVE/CAPTAIN
  * - 已存在 ACTIVE CAPTAIN 时默认拒绝
@@ -61,7 +61,7 @@ async function main() {
     console.log(
       [
         "用法: pnpm captain:bootstrap",
-        "环境变量: CAPTAIN_USERNAME, CAPTAIN_EMAIL, CAPTAIN_DISPLAY_NAME, CAPTAIN_PASSWORD",
+        "环境变量: CAPTAIN_USERNAME, CAPTAIN_DISPLAY_NAME, CAPTAIN_PASSWORD",
         "从环境变量读取时无需交互；否则交互输入。",
         "创建首位 ACTIVE/CAPTAIN 用户，写入审计日志。",
       ].join("\n"),
@@ -70,22 +70,20 @@ async function main() {
   }
 
   const username = process.env.CAPTAIN_USERNAME ?? "";
-  const email = process.env.CAPTAIN_EMAIL ?? "";
   const displayName = process.env.CAPTAIN_DISPLAY_NAME ?? "";
   const password = process.env.CAPTAIN_PASSWORD ?? "";
 
-  const needInteractive = !(username && email && displayName && password);
+  const needInteractive = !(username && displayName && password);
   const rl = needInteractive
     ? createInterface({ input: process.stdin, output: process.stdout })
     : null;
 
   const finalUsername = username || (rl ? await promptHidden(rl, "队长用户名: ") : "");
-  const finalEmail = email || (rl ? await promptHidden(rl, "队长邮箱: ") : "");
   const finalDisplayName = displayName || (rl ? await promptHidden(rl, "队长显示名: ") : "");
   const finalPassword = password || (rl ? await promptHidden(rl, "队长密码(至少10位): ") : "");
 
-  if (!finalUsername || !finalEmail || !finalDisplayName || !finalPassword) {
-    fail("用户名、邮箱、显示名和密码均不能为空");
+  if (!finalUsername || !finalDisplayName || !finalPassword) {
+    fail("用户名、显示名和密码均不能为空");
   }
   if (finalPassword.length < 10 || finalPassword.length > 128) {
     fail("密码长度必须为 10-128 位");
@@ -96,9 +94,6 @@ async function main() {
     finalUsername.length > 32
   ) {
     fail("用户名只能包含字母、数字、下划线或中文，3-32 位");
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(finalEmail)) {
-    fail("邮箱格式不正确");
   }
 
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
@@ -114,20 +109,14 @@ async function main() {
     }
 
     const usernameNormalized = finalUsername.trim().toLocaleLowerCase("zh-CN");
-    const emailNormalized = finalEmail.trim().toLowerCase();
 
     const existing = await db.user.findFirst({
       where: {
-        OR: [
-          { username: finalUsername },
-          { usernameNormalized },
-          { email: finalEmail },
-          { emailNormalized },
-        ],
+        OR: [{ username: finalUsername }, { usernameNormalized }],
       },
     });
     if (existing) {
-      fail("用户名或邮箱已存在，重复执行不会创建重复用户");
+      fail("用户名已存在，重复执行不会创建重复用户");
     }
 
     const { hash } = await import("@node-rs/argon2");
@@ -143,8 +132,6 @@ async function main() {
         data: {
           username: finalUsername.trim(),
           usernameNormalized,
-          email: finalEmail.trim(),
-          emailNormalized,
           passwordHash,
           displayName: finalDisplayName.trim(),
           role: "CAPTAIN",

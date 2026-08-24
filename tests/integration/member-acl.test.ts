@@ -19,8 +19,6 @@ describe("member profile ACL", () => {
       data: {
         username: "aclcaptain",
         usernameNormalized: "aclcaptain",
-        email: "aclcaptain@example.com",
-        emailNormalized: "aclcaptain@example.com",
         passwordHash,
         displayName: "ACL队长",
         role: "CAPTAIN",
@@ -31,8 +29,6 @@ describe("member profile ACL", () => {
       data: {
         username: "aclmember",
         usernameNormalized: "aclmember",
-        email: "aclmember@example.com",
-        emailNormalized: "aclmember@example.com",
         passwordHash,
         displayName: "ACL队员",
         role: "MEMBER",
@@ -45,8 +41,6 @@ describe("member profile ACL", () => {
       data: {
         username: "aclviewer",
         usernameNormalized: "aclviewer",
-        email: "aclviewer@example.com",
-        emailNormalized: "aclviewer@example.com",
         passwordHash,
         displayName: "ACL观众",
         role: "MEMBER",

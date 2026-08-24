@@ -7,6 +7,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  experimental: {
+    staticGenerationMaxConcurrency: 1,
+    cpus: 1,
+  },
   images: {
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "9000" },

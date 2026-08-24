@@ -58,8 +58,6 @@ async function main() {
         data: {
           username: "devcaptain",
           usernameNormalized: "devcaptain",
-          email: "dev-captain@example.com",
-          emailNormalized: "dev-captain@example.com",
           passwordHash,
           displayName: "开发队长",
           role: "CAPTAIN",
@@ -99,22 +97,22 @@ async function main() {
     await db.article.create({
       data: {
         slug: "welcome-to-eic-fc",
-        title: "欢迎来到 EIC FC",
-        summary: "球队官网已上线，欢迎浏览动态并申请加入。",
+        title: "欢迎来到球队空间",
+        summary: "这里记录训练与比赛心得，仅已审核队员可见。",
         contentJson: {
           type: "doc",
           content: [
             {
               type: "paragraph",
-              content: [{ type: "text", text: "欢迎来到 EIC FC 球队官网。" }],
+              content: [{ type: "text", text: "欢迎来到球队空间。" }],
             },
             {
               type: "paragraph",
-              content: [{ type: "text", text: "注册后请等待队长审核，通过后即可参加活动接龙。" }],
+              content: [{ type: "text", text: "账号由队长开通后即可查看动态并参加活动接龙。" }],
             },
           ],
         },
-        plainText: "欢迎来到 EIC FC 球队官网。注册后请等待队长审核，通过后即可参加活动接龙。",
+        plainText: "欢迎来到球队空间。账号由队长开通后即可查看动态并参加活动接龙。",
         status: "PUBLISHED",
         authorId: captain.id,
         publishedById: captain.id,

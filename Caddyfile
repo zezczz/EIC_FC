@@ -1,17 +1,13 @@
 # EIC FC Caddy 配置（ARCHITECTURE.md §20）
 # 主域名 HTTPS；www 301 跳转；安全响应头；反代 app:3000
+# 域名未解析时，IP HTTPS 使用内部证书，便于立即验收。
 
 {
 	email {$CADDY_ACME_EMAIL}
+	auto_https off
 }
 
-www.czzczzzez.cloud {
-	redir https://czzczzzez.cloud{uri} permanent
-}
-
-czzczzzez.cloud {
-	encode zstd gzip
-
+(security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
@@ -20,20 +16,66 @@ czzczzzez.cloud {
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		-Server
 	}
+}
 
-	# 上传体限制（与 MAX_IMAGE_BYTES 对齐，留余量）
-	request_body {
-		max_size 12MB
-	}
-
-	reverse_proxy app:3000 {
+(minio_proxy) {
+	reverse_proxy minio:9000 {
+		header_up Host {host}
 		header_up X-Real-IP {remote_host}
 		header_up X-Forwarded-For {remote_host}
 		header_up X-Forwarded-Proto {scheme}
 	}
+}
 
+(app_proxy) {
+	encode zstd gzip
+	import security_headers
+	request_body {
+		max_size 12MB
+	}
+	handle /eicfc* {
+		import minio_proxy
+	}
+	handle {
+		reverse_proxy app:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+}
+
+# 域名证书在 DNS 解析完成后再启用，避免 ACME NXDOMAIN 干扰 IP 站点。
+
+:80 {
+	import app_proxy
 	log {
 		output stdout
 		format json
 	}
 }
+
+# www.czzczzzez.cloud {
+# 	redir https://czzczzzez.cloud{uri} permanent
+# }
+#
+# czzczzzez.cloud {
+# 	import app_proxy
+# 	log {
+# 		output stdout
+# 		format json
+# 	}
+# }
+#
+# s3.czzczzzez.cloud {
+# 	encode zstd gzip
+# 	request_body {
+# 		max_size 12MB
+# 	}
+# 	import minio_proxy
+# 	log {
+# 		output stdout
+# 		format json
+# 	}
+# }
+

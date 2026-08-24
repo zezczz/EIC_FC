@@ -19,8 +19,6 @@ function normalizeUsername(username: string): string {
 export async function registerUser(input: RegisterInput, ip: string) {
   const username = input.username.trim();
   const usernameNormalized = normalizeUsername(username);
-  const email = input.email.trim().toLowerCase();
-  const emailNormalized = email.toLowerCase();
 
   if (await isRegisterBlocked(ip)) {
     throw new AppError("RATE_LIMITED", "注册过于频繁，请稍后再试");
@@ -28,21 +26,18 @@ export async function registerUser(input: RegisterInput, ip: string) {
 
   const existing = await db.user.findFirst({
     where: {
-      OR: [{ usernameNormalized }, { emailNormalized }, { username }, { email }],
+      OR: [{ usernameNormalized }, { username }],
     },
-    select: { usernameNormalized: true, emailNormalized: true },
+    select: { usernameNormalized: true },
   });
   if (existing) {
     await recordAuthAttempt({
       kind: "REGISTER",
-      identity: emailNormalized,
+      identity: usernameNormalized,
       ip,
       succeeded: false,
     });
-    if (existing.usernameNormalized === usernameNormalized) {
-      throw errConflict("该用户名已被使用");
-    }
-    throw errConflict("该邮箱已被注册");
+    throw errConflict("该用户名已被使用");
   }
 
   const passwordHash = await hashPassword(input.password);
@@ -50,8 +45,6 @@ export async function registerUser(input: RegisterInput, ip: string) {
     data: {
       username,
       usernameNormalized,
-      email,
-      emailNormalized,
       passwordHash,
       displayName: input.displayName.trim(),
       applicationMessage: input.applicationMessage?.trim() || null,
@@ -62,7 +55,7 @@ export async function registerUser(input: RegisterInput, ip: string) {
 
   await recordAuthAttempt({
     kind: "REGISTER",
-    identity: emailNormalized,
+    identity: usernameNormalized,
     ip,
     succeeded: true,
   });
@@ -82,12 +75,7 @@ export async function loginUser(input: LoginInput, ip: string) {
   const identity = input.identity.trim();
   const user = await db.user.findFirst({
     where: {
-      OR: [
-        { username: identity },
-        { usernameNormalized: normalizeUsername(identity) },
-        { email: identity },
-        { emailNormalized: identity.toLowerCase() },
-      ],
+      OR: [{ username: identity }, { usernameNormalized: normalizeUsername(identity) }],
     },
   });
 

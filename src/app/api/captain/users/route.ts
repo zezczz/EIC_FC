@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handle } from "@/server/http";
-import { requireAnyPermission } from "@/server/auth/guards";
+import { handle, parseJsonBody, requireSameOrigin, getClientIp } from "@/server/http";
+import { requireAnyPermission, requirePermission } from "@/server/auth/guards";
 import { PERMISSIONS } from "@/server/auth/permissions";
-import { listUsers } from "@/server/users/service";
-import { userListQuerySchema } from "@/schemas/users";
+import { createMemberByCaptain, listUsers, type ReviewContext } from "@/server/users/service";
+import { createMemberSchema, userListQuerySchema } from "@/schemas/users";
 
 /**
  * GET /api/captain/users - 用户列表
@@ -22,4 +22,21 @@ export const GET = handle(async (request: NextRequest, { requestId }) => {
 
   const data = await listUsers(query);
   return NextResponse.json({ data, requestId });
+});
+
+/**
+ * POST /api/captain/users - 队长直接创建 ACTIVE 队员
+ */
+export const POST = handle(async (request: NextRequest, { requestId }) => {
+  requireSameOrigin(request);
+  const captain = await requirePermission(PERMISSIONS.USERS_REVIEW);
+  const input = await parseJsonBody(request, createMemberSchema);
+  const ctx: ReviewContext = {
+    actorId: captain.id,
+    requestId,
+    ip: getClientIp(request),
+    userAgent: request.headers.get("user-agent"),
+  };
+  const data = await createMemberByCaptain(input, captain.id, ctx);
+  return NextResponse.json({ data, requestId }, { status: 201 });
 });

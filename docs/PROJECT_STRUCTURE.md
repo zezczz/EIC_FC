@@ -66,15 +66,15 @@ src/
 
 括号目录是 Route Group，**不出现在 URL 里**。
 
-| 分组 / 路径          | URL 示例                           | 谁能看       |
-| -------------------- | ---------------------------------- | ------------ |
-| 公开页               | `/` `/news` `/news/[slug]` `/team` | 所有人       |
-| `(auth)`             | `/login` `/register`               | 未登录       |
-| `pending`            | `/pending`                         | 注册后待审核 |
-| `(member)`           | `/account` `/relay` `/members`     | 已审核队员   |
-| `(captain)/captain/` | `/captain/...`                     | 队长后台     |
+| 分组 / 路径          | URL 示例                           | 谁能看               |
+| -------------------- | ---------------------------------- | -------------------- |
+| 公开页               | `/` `/login`                       | 所有人               |
+| `(auth)`             | `/login`；`/register` 重定向登录   | 未登录               |
+| `pending`            | `/pending`                         | 遗留待审核账号       |
+| `(member)`           | `/news` `/team` `/account` `/relay` `/members` | 已审核队员 |
+| `(captain)/captain/` | `/captain/...`                     | 队长后台             |
 
-代码里「文章」对应产品用语「球队动态」，公开 URL 用 `/news`，API 用 `/api/articles`。成员列表用 `/members`，队长审核接口用 `/api/captain/users`。
+代码里「文章」对应产品用语「球队动态」，队员 URL 用 `/news`，API 用 `/api/articles`。未登录不可见。成员列表用 `/members`，队长开通/审核接口用 `/api/captain/users`。
 
 ### 服务端（`src/server`）
 
